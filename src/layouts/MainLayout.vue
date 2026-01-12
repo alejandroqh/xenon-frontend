@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useSucursalStore } from '@/stores/sucursal'
+import { useAuthStore } from '@/stores/auth'
 import {
   HomeIcon,
   TruckIcon,
@@ -13,11 +14,19 @@ import {
   ChartBarIcon,
   ClipboardDocumentListIcon,
   UserGroupIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  ArrowRightStartOnRectangleIcon
 } from '@heroicons/vue/24/outline'
 
 const appName = import.meta.env.VITE_APP_NAME
+const router = useRouter()
 const sucursalStore = useSucursalStore()
+const authStore = useAuthStore()
+
+function cerrarSesion() {
+  authStore.cerrarSesion()
+  router.push('/login')
+}
 
 const navigation = [
   {
@@ -100,9 +109,16 @@ function onSucursalChange(event: Event) {
         </div>
       </nav>
 
-      <!-- Subtitle -->
-      <div class="p-4 border-t border-gray-200">
-        <span class="text-xs text-gray-500">Plataforma de Operaciones Comerciales</span>
+      <!-- Footer -->
+      <div class="p-4 border-t border-gray-200 space-y-3">
+        <button
+          @click="cerrarSesion"
+          class="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
+        >
+          <ArrowRightStartOnRectangleIcon class="w-5 h-5" />
+          Cerrar sesion
+        </button>
+        <span class="block text-xs text-gray-500">Plataforma de Operaciones Comerciales</span>
       </div>
     </aside>
 
