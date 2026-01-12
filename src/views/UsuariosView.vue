@@ -3,6 +3,6 @@
 
 <template>
   <div class="flex items-center justify-center h-64">
-    <p class="text-gray-400">Importaciones</p>
+    <p class="text-gray-400">Usuarios</p>
   </div>
 </template>

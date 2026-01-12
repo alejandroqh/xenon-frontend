@@ -9,10 +9,64 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/DashboardView.vue')
   },
   {
-    path: '/envios',
-    name: 'Envíos',
-    meta: { title: 'Gestión de Envíos' },
+    path: '/importaciones',
+    name: 'Importaciones',
+    meta: { title: 'Importaciones' },
     component: () => import('@/views/ShipmentsView.vue')
+  },
+  {
+    path: '/productos',
+    name: 'Productos',
+    meta: { title: 'Productos' },
+    component: () => import('@/views/ProductosView.vue')
+  },
+  {
+    path: '/inventario',
+    name: 'Inventario',
+    meta: { title: 'Inventario' },
+    component: () => import('@/views/InventarioView.vue')
+  },
+  {
+    path: '/clientes',
+    name: 'Clientes',
+    meta: { title: 'Clientes' },
+    component: () => import('@/views/ClientesView.vue')
+  },
+  {
+    path: '/rutas',
+    name: 'Rutas',
+    meta: { title: 'Rutas' },
+    component: () => import('@/views/RutasView.vue')
+  },
+  {
+    path: '/promociones',
+    name: 'Promociones',
+    meta: { title: 'Promociones' },
+    component: () => import('@/views/PromocionesView.vue')
+  },
+  {
+    path: '/reportes',
+    name: 'Reportes',
+    meta: { title: 'Reportes' },
+    component: () => import('@/views/ReportesView.vue')
+  },
+  {
+    path: '/estadisticas',
+    name: 'Estadísticas',
+    meta: { title: 'Estadísticas' },
+    component: () => import('@/views/EstadisticasView.vue')
+  },
+  {
+    path: '/auditoria',
+    name: 'Auditoría',
+    meta: { title: 'Auditoría' },
+    component: () => import('@/views/AuditoriaView.vue')
+  },
+  {
+    path: '/usuarios',
+    name: 'Usuarios',
+    meta: { title: 'Usuarios' },
+    component: () => import('@/views/UsuariosView.vue')
   },
   {
     path: '/configuracion',
