@@ -11,7 +11,9 @@ const apiClient = axios.create({
 // Request interceptor to add headers
 apiClient.interceptors.request.use((config) => {
   const sucursalStore = useSucursalStore()
-  config.headers['X-Sucursal-Id'] = sucursalStore.sucursalActual.id
+  if (sucursalStore.sucursalActual) {
+    config.headers['X-Sucursal-Id'] = sucursalStore.sucursalActual.id
+  }
 
   // Add Authorization header if token exists
   const token = localStorage.getItem('auth_token')

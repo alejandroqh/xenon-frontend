@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useSucursalStore } from '@/stores/sucursal'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, type MenuRuta } from '@/stores/auth'
 import {
   HomeIcon,
   TruckIcon,
@@ -28,45 +29,70 @@ function cerrarSesion() {
   router.push('/login')
 }
 
-const navigation = [
+interface NavItem {
+  name: string
+  path: string
+  icon: typeof HomeIcon
+  menuKey: MenuRuta
+}
+
+interface NavSection {
+  group: string
+  items: NavItem[]
+}
+
+const allNavigation: NavSection[] = [
   {
     group: 'Principal',
     items: [
-      { name: 'Panel', path: '/', icon: HomeIcon }
+      { name: 'Panel', path: '/', icon: HomeIcon, menuKey: 'panel' }
     ]
   },
   {
     group: 'Operaciones',
     items: [
-      { name: 'Importaciones', path: '/importaciones', icon: TruckIcon },
-      { name: 'Productos', path: '/productos', icon: CubeIcon },
-      { name: 'Inventario', path: '/inventario', icon: ArchiveBoxIcon }
+      { name: 'Importaciones', path: '/importaciones', icon: TruckIcon, menuKey: 'importaciones' },
+      { name: 'Productos', path: '/productos', icon: CubeIcon, menuKey: 'productos' },
+      { name: 'Inventario', path: '/inventario', icon: ArchiveBoxIcon, menuKey: 'inventario' }
     ]
   },
   {
     group: 'Ventas',
     items: [
-      { name: 'Clientes', path: '/clientes', icon: UsersIcon },
-      { name: 'Rutas', path: '/rutas', icon: MapIcon },
-      { name: 'Promociones', path: '/promociones', icon: TagIcon }
+      { name: 'Clientes', path: '/clientes', icon: UsersIcon, menuKey: 'clientes' },
+      { name: 'Rutas', path: '/rutas', icon: MapIcon, menuKey: 'rutas' },
+      { name: 'Promociones', path: '/promociones', icon: TagIcon, menuKey: 'promociones' }
     ]
   },
   {
     group: 'Análisis',
     items: [
-      { name: 'Reportes', path: '/reportes', icon: DocumentChartBarIcon },
-      { name: 'Estadísticas', path: '/estadisticas', icon: ChartBarIcon }
+      { name: 'Reportes', path: '/reportes', icon: DocumentChartBarIcon, menuKey: 'reportes' },
+      { name: 'Estadísticas', path: '/estadisticas', icon: ChartBarIcon, menuKey: 'estadisticas' }
     ]
   },
   {
     group: 'Sistema',
     items: [
-      { name: 'Auditoría', path: '/auditoria', icon: ClipboardDocumentListIcon },
-      { name: 'Usuarios', path: '/usuarios', icon: UserGroupIcon },
-      { name: 'Configuración', path: '/configuracion', icon: Cog6ToothIcon }
+      { name: 'Auditoría', path: '/auditoria', icon: ClipboardDocumentListIcon, menuKey: 'auditoria' },
+      { name: 'Usuarios', path: '/usuarios', icon: UserGroupIcon, menuKey: 'usuarios' },
+      { name: 'Configuración', path: '/configuracion', icon: Cog6ToothIcon, menuKey: 'configuracion' }
     ]
   }
 ]
+
+// Filter navigation based on permissions for current sucursal
+const navigation = computed(() => {
+  const sucursalId = sucursalStore.sucursalActual?.id
+  if (!sucursalId) return []
+
+  return allNavigation
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item => authStore.puedeVer(sucursalId, item.menuKey))
+    }))
+    .filter(section => section.items.length > 0)
+})
 
 function onSucursalChange(event: Event) {
   const target = event.target as HTMLSelectElement
@@ -130,12 +156,13 @@ function onSucursalChange(event: Event) {
           {{ $route.meta.title || $route.name }}
         </h1>
         <select
+          v-if="sucursalStore.sucursalActual"
           :value="sucursalStore.sucursalActual.id"
           @change="onSucursalChange"
-          class="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          class="px-4 py-2 text-sm font-medium bg-primary-50 text-primary-700 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent cursor-pointer hover:bg-primary-100 transition-colors"
         >
           <option
-            v-for="sucursal in sucursalStore.todasLasSucursales"
+            v-for="sucursal in sucursalStore.sucursalesAccesibles"
             :key="sucursal.id"
             :value="sucursal.id"
           >

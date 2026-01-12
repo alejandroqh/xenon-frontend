@@ -62,3 +62,63 @@ src/
 - Store hooks prefixed with `use` (e.g., `useSucursalStore`)
 - Views suffixed with `View` (e.g., `DashboardView.vue`)
 - Layouts suffixed with `Layout` (e.g., `MainLayout.vue`)
+
+## Authentication & Permissions
+
+### Auth Store (`src/stores/auth.ts`)
+
+Mock login with `admin/admin` credentials. Will be replaced with API calls when backend is enabled.
+
+### User Model
+
+```typescript
+interface Usuario {
+  id: string
+  nombreCompleto: string
+  nombreUsuario: string
+  email: string
+  nivel: NivelUsuario        // 'admin' | 'gerente' | 'vendedor' | 'operador' | 'visor'
+  imagen: string | null
+  permisosPorSucursal: PermisosSucursal[]
+}
+```
+
+### Permission System
+
+Granular permissions per sucursal per menu item:
+
+```typescript
+type PermisoAccion = 'view' | 'edit'
+
+type MenuRuta =
+  | 'panel' | 'importaciones' | 'productos' | 'inventario'
+  | 'clientes' | 'rutas' | 'promociones'
+  | 'reportes' | 'estadisticas'
+  | 'auditoria' | 'usuarios' | 'configuracion'
+
+interface PermisosSucursal {
+  sucursalId: string
+  menus: Partial<Record<MenuRuta, PermisoAccion[]>>
+}
+```
+
+- **No entry for a menu** = disabled/no access
+- **`['view']`** = read-only access
+- **`['view', 'edit']`** = full access
+
+### Permission Helper Functions
+
+```typescript
+authStore.tieneAccesoSucursal(sucursalId)      // can access branch?
+authStore.puedeVer(sucursalId, menu)           // can view menu?
+authStore.puedeEditar(sucursalId, menu)        // can edit in menu?
+authStore.menuDeshabilitado(sucursalId, menu)  // is menu disabled?
+```
+
+### Sucursal Access
+
+`useSucursalStore` filters `sucursalesAccesibles` based on user permissions. Users only see branches they have access to in the selector.
+
+### Navigation Filtering
+
+`MainLayout.vue` filters sidebar navigation based on `puedeVer()` for the current sucursal. Menu items without view permission are hidden.
