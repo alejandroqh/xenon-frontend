@@ -26,6 +26,44 @@ Note: Uses Bun as package manager (bun.lock present). No test or lint commands c
 - Axios for HTTP requests
 - Tailwind CSS v4 (via Vite plugin)
 
+### UI Libraries (Use First Before Implementing)
+
+**Always prefer these existing libraries over custom implementations:**
+
+| Library | Version | Use For | Example Usage |
+|---------|---------|---------|---------------|
+| **SweetAlert2** | 11.x | Toasts, alerts, confirmations, modals | `Swal.fire()`, `Toast.fire()` |
+| **Moment.js** | 2.x | Date formatting, parsing, manipulation | `moment(date).format('LL')` |
+| **Heroicons** | 2.x | Icons (solid/outline variants) | `import { IconName } from '@heroicons/vue/24/outline'` |
+
+**SweetAlert2 Toast Pattern** (from `UsuariosView.vue`):
+```typescript
+import Swal from 'sweetalert2'
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'center',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer
+    toast.onmouseleave = Swal.resumeTimer
+  }
+})
+
+// Usage
+Toast.fire({ icon: 'success', title: 'Mensaje guardado' })
+```
+
+**Moment.js with Spanish locale**:
+```typescript
+import moment from 'moment'
+import 'moment/dist/locale/es-mx.js'
+
+moment(fecha).format('LL')  // "13 de enero de 2026"
+```
+
 ### Path Alias
 `@/` maps to `src/` (configured in vite.config.ts and tsconfig)
 
