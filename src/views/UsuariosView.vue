@@ -42,6 +42,20 @@ const cambiandoEstado = ref(false)
 const modalFormAbierto = ref(false)
 const usuarioParaEditar = ref<UsuarioResponse | null>(null)
 
+// Toast notification state
+const toastVisible = ref(false)
+const toastMensaje = ref('')
+let toastTimeout: ReturnType<typeof setTimeout> | null = null
+
+function mostrarToast(mensaje: string) {
+  toastMensaje.value = mensaje
+  toastVisible.value = true
+  if (toastTimeout) clearTimeout(toastTimeout)
+  toastTimeout = setTimeout(() => {
+    toastVisible.value = false
+  }, 3000)
+}
+
 function togglePermiso(sucursalId: string) {
   permisosExpandidos.value[sucursalId] = !permisosExpandidos.value[sucursalId]
 }
@@ -164,6 +178,7 @@ async function confirmarCambioEstado() {
     }
 
     cerrarModalEstado()
+    mostrarToast(nuevoEstado ? 'Usuario activado correctamente' : 'Usuario desactivado correctamente')
   } catch (err) {
     console.error('Error al cambiar estado del usuario:', err)
   } finally {
@@ -187,7 +202,8 @@ function cerrarModalForm() {
 }
 
 function onUsuarioGuardado(usuario: UsuarioResponse) {
-  if (usuarioParaEditar.value) {
+  const esEdicion = !!usuarioParaEditar.value
+  if (esEdicion) {
     // Update existing user in the list
     const index = usuarios.value.findIndex(u => u.id === usuario.id)
     if (index !== -1) {
@@ -198,6 +214,7 @@ function onUsuarioGuardado(usuario: UsuarioResponse) {
     usuarios.value.unshift(usuario)
   }
   cerrarModalForm()
+  mostrarToast(esEdicion ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente')
 }
 
 function formatearFecha(timestamp: number): string {
@@ -800,12 +817,20 @@ onMounted(() => {
               </div>
 
               <!-- Footer -->
-              <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
                 <button
                   @click="cerrarModalDetalles"
-                  class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   Cerrar
+                </button>
+                <button
+                  v-if="usuarioSeleccionado"
+                  @click="cerrarModalDetalles(); abrirModalEditar(usuarioSeleccionado)"
+                  class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
+                >
+                  <PencilSquareIcon class="w-4 h-4" />
+                  Editar Usuario
                 </button>
               </div>
             </div>
@@ -907,6 +932,19 @@ onMounted(() => {
       @cerrar="cerrarModalForm"
       @guardado="onUsuarioGuardado"
     />
+
+    <!-- Toast Notification -->
+    <Teleport to="body">
+      <Transition name="toast">
+        <div
+          v-if="toastVisible"
+          class="fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 bg-green-600 text-white rounded-lg shadow-lg"
+        >
+          <CheckCircleIcon class="w-5 h-5 flex-shrink-0" />
+          <span class="text-sm font-medium">{{ toastMensaje }}</span>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -939,5 +977,16 @@ onMounted(() => {
 .accordion-leave-from {
   opacity: 1;
   max-height: 200px;
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(-1rem);
 }
 </style>

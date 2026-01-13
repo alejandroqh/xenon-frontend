@@ -382,7 +382,7 @@ async function guardar() {
                       <select
                         id="nivel"
                         v-model="nivel"
-                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                        class="w-full h-[38px] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
                       >
                         <option v-for="opt in nivelOptions" :key="opt.value" :value="opt.value">
                           {{ opt.label }}
