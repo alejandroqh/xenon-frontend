@@ -1,5 +1,5 @@
 import apiClient from './client'
-import type { UsuarioResponse } from '@/types'
+import type { UsuarioResponse, CrearUsuarioRequest, ActualizarUsuarioRequest } from '@/types'
 
 // =============================================================================
 // Usuarios API Functions
@@ -26,23 +26,17 @@ export async function obtener(id: string): Promise<UsuarioResponse> {
 }
 
 /**
+ * Create a new user
+ */
+export async function crear(datos: CrearUsuarioRequest): Promise<UsuarioResponse> {
+  const response = await apiClient.post<UsuarioResponse>('/usuarios', datos)
+  return response.data
+}
+
+/**
  * Update user (partial update)
  */
-export async function actualizar(id: string, datos: Partial<{
-  nombreCompleto: string
-  nombreUsuario: string
-  email: string
-  contrasena: string
-  nivel: 'admin' | 'gerente' | 'vendedor' | 'operador' | 'visor'
-  imagen: string | null
-  telefono: string | null
-  activo: boolean
-  accesoApp: boolean
-  permisosPorSucursal: Array<{
-    sucursalId: string
-    menus: Record<string, string[]>
-  }>
-}>): Promise<UsuarioResponse> {
+export async function actualizar(id: string, datos: ActualizarUsuarioRequest): Promise<UsuarioResponse> {
   const response = await apiClient.patch<UsuarioResponse>(`/usuarios/${id}`, datos)
   return response.data
 }

@@ -15,6 +15,7 @@ import {
   NoSymbolIcon,
   CheckCircleIcon
 } from '@heroicons/vue/24/outline'
+import UsuarioFormModal from '@/components/UsuarioFormModal.vue'
 
 const usuarios = ref<UsuarioResponse[]>([])
 const cargando = ref(true)
@@ -32,6 +33,10 @@ const permisosExpandidos = ref<Record<string, boolean>>({})
 const modalEstadoAbierto = ref(false)
 const usuarioParaCambiarEstado = ref<UsuarioResponse | null>(null)
 const cambiandoEstado = ref(false)
+
+// Create/Edit modal state
+const modalFormAbierto = ref(false)
+const usuarioParaEditar = ref<UsuarioResponse | null>(null)
 
 function togglePermiso(sucursalId: string) {
   permisosExpandidos.value[sucursalId] = !permisosExpandidos.value[sucursalId]
@@ -162,6 +167,35 @@ async function confirmarCambioEstado() {
   }
 }
 
+function abrirModalCrear() {
+  usuarioParaEditar.value = null
+  modalFormAbierto.value = true
+}
+
+function abrirModalEditar(usuario: UsuarioResponse) {
+  usuarioParaEditar.value = usuario
+  modalFormAbierto.value = true
+}
+
+function cerrarModalForm() {
+  modalFormAbierto.value = false
+  usuarioParaEditar.value = null
+}
+
+function onUsuarioGuardado(usuario: UsuarioResponse) {
+  if (usuarioParaEditar.value) {
+    // Update existing user in the list
+    const index = usuarios.value.findIndex(u => u.id === usuario.id)
+    if (index !== -1) {
+      usuarios.value[index] = usuario
+    }
+  } else {
+    // Add new user to the list
+    usuarios.value.unshift(usuario)
+  }
+  cerrarModalForm()
+}
+
 function formatearFecha(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString('es-MX', {
     year: 'numeric',
@@ -252,6 +286,7 @@ onMounted(() => {
       <!-- Actions -->
       <div class="flex items-center gap-2 sm:ml-auto">
         <button
+          @click="abrirModalCrear"
           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors cursor-pointer"
         >
           <PlusIcon class="h-5 w-5" />
@@ -379,7 +414,7 @@ onMounted(() => {
                 Ver detalles
               </span>
             </button>
-            <button class="group relative p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer">
+            <button @click="abrirModalEditar(usuario)" class="group relative p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer">
               <PencilSquareIcon class="w-5 h-5" />
               <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 Editar
@@ -527,7 +562,7 @@ onMounted(() => {
                         Ver detalles
                       </span>
                     </button>
-                    <button class="group relative p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer">
+                    <button @click="abrirModalEditar(usuario)" class="group relative p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer">
                       <PencilSquareIcon class="w-4 h-4" />
                       <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         Editar
@@ -866,6 +901,14 @@ onMounted(() => {
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Modal Crear/Editar Usuario -->
+    <UsuarioFormModal
+      :abierto="modalFormAbierto"
+      :usuario="usuarioParaEditar"
+      @cerrar="cerrarModalForm"
+      @guardado="onUsuarioGuardado"
+    />
   </div>
 </template>
 
