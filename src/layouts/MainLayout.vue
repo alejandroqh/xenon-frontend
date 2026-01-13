@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useSucursalStore } from '@/stores/sucursal'
 import { useAuthStore, type MenuRuta } from '@/stores/auth'
@@ -16,8 +16,40 @@ import {
   ClipboardDocumentListIcon,
   UserGroupIcon,
   Cog6ToothIcon,
-  ArrowRightStartOnRectangleIcon
+  ArrowRightStartOnRectangleIcon,
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/vue/24/outline'
+
+// Sidebar state
+const sidebarOpen = ref(false)
+const isLargeScreen = ref(false)
+
+function checkScreenSize() {
+  isLargeScreen.value = window.innerWidth >= 1024
+  if (isLargeScreen.value) {
+    sidebarOpen.value = true
+  }
+}
+
+function toggleSidebar() {
+  sidebarOpen.value = !sidebarOpen.value
+}
+
+function closeSidebarOnMobile() {
+  if (!isLargeScreen.value) {
+    sidebarOpen.value = false
+  }
+}
+
+onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkScreenSize)
+})
 
 const appName = import.meta.env.VITE_APP_NAME
 const router = useRouter()
@@ -103,64 +135,98 @@ function onSucursalChange(event: Event) {
 
 <template>
   <div class="min-h-screen bg-gray-50">
+    <!-- Mobile overlay -->
+    <Transition name="fade">
+      <div
+        v-if="sidebarOpen && !isLargeScreen"
+        class="fixed inset-0 z-20 bg-gray-900/50"
+        @click="closeSidebarOnMobile"
+      />
+    </Transition>
+
     <!-- Sidebar -->
-    <aside class="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col">
-      <!-- Logo -->
-      <div class="flex items-center gap-2 h-16 px-6 border-b border-gray-200">
-        <span class="text-xl font-semibold text-gray-900">{{ appName }}</span>
-        <span class="text-xs text-gray-500">y más...</span>
-      </div>
-
-      <!-- Navigation -->
-      <nav class="p-4 space-y-4 flex-1 overflow-y-auto">
-        <div v-for="section in navigation" :key="section.group">
-          <p class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            {{ section.group }}
-          </p>
-          <div class="space-y-1">
-            <RouterLink
-              v-for="item in section.items"
-              :key="item.path"
-              :to="item.path"
-              class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors"
-              :class="[
-                $route.path === item.path
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              ]"
-            >
-              <component :is="item.icon" class="w-5 h-5" />
-              {{ item.name }}
-            </RouterLink>
+    <Transition name="slide">
+      <aside
+        v-show="sidebarOpen"
+        class="fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex flex-col"
+      >
+        <!-- Logo -->
+        <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+          <div class="flex items-center gap-2">
+            <span class="text-xl font-semibold text-gray-900">{{ appName }}</span>
+            <span class="text-xs text-gray-500">y más...</span>
           </div>
+          <button
+            @click="toggleSidebar"
+            class="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors lg:hidden"
+          >
+            <XMarkIcon class="w-5 h-5" />
+          </button>
         </div>
-      </nav>
 
-      <!-- Footer -->
-      <div class="p-4 border-t border-gray-200 space-y-3">
-        <button
-          @click="cerrarSesion"
-          class="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
-        >
-          <ArrowRightStartOnRectangleIcon class="w-5 h-5" />
-          Cerrar sesion
-        </button>
-        <span class="block text-xs text-gray-500">Plataforma de Operaciones Comerciales</span>
-      </div>
-    </aside>
+        <!-- Navigation -->
+        <nav class="p-4 space-y-4 flex-1 overflow-y-auto">
+          <div v-for="section in navigation" :key="section.group">
+            <p class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {{ section.group }}
+            </p>
+            <div class="space-y-1">
+              <RouterLink
+                v-for="item in section.items"
+                :key="item.path"
+                :to="item.path"
+                class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                :class="[
+                  $route.path === item.path
+                    ? 'bg-primary-50 text-primary-700'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ]"
+                @click="closeSidebarOnMobile"
+              >
+                <component :is="item.icon" class="w-5 h-5" />
+                {{ item.name }}
+              </RouterLink>
+            </div>
+          </div>
+        </nav>
+
+        <!-- Footer -->
+        <div class="p-4 border-t border-gray-200 space-y-3">
+          <button
+            @click="cerrarSesion"
+            class="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
+          >
+            <ArrowRightStartOnRectangleIcon class="w-5 h-5" />
+            Cerrar sesion
+          </button>
+          <span class="block text-xs text-gray-500">Plataforma de Operaciones Comerciales</span>
+        </div>
+      </aside>
+    </Transition>
 
     <!-- Main content -->
-    <main class="pl-64">
+    <main
+      class="transition-all duration-300"
+      :class="sidebarOpen && isLargeScreen ? 'lg:pl-64' : ''"
+    >
       <!-- Header -->
-      <header class="sticky top-0 z-10 flex items-center justify-between h-16 px-8 bg-white border-b border-gray-200">
-        <h1 class="text-lg font-semibold text-gray-900">
-          {{ $route.meta.title || $route.name }}
-        </h1>
+      <header class="sticky top-0 z-10 flex items-center justify-between h-16 px-4 sm:px-8 bg-white border-b border-gray-200">
+        <div class="flex items-center gap-3">
+          <button
+            @click="toggleSidebar"
+            class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <Bars3Icon class="w-5 h-5" />
+          </button>
+          <h1 class="text-lg font-semibold text-gray-900">
+            {{ $route.meta.title || $route.name }}
+          </h1>
+        </div>
         <select
           v-if="sucursalStore.sucursalActual"
           :value="sucursalStore.sucursalActual.id"
           @change="onSucursalChange"
-          class="px-4 py-2 text-sm font-medium bg-primary-50 text-primary-700 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent cursor-pointer hover:bg-primary-100 transition-colors"
+          class="px-3 py-2 text-sm font-medium bg-primary-50 text-primary-700 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent cursor-pointer hover:bg-primary-100 transition-colors"
         >
           <option
             v-for="sucursal in sucursalStore.sucursalesAccesibles"
@@ -173,9 +239,31 @@ function onSucursalChange(event: Event) {
       </header>
 
       <!-- Page content -->
-      <div class="p-8">
+      <div class="p-4 sm:p-8">
         <RouterView />
       </div>
     </main>
   </div>
 </template>
+
+<style scoped>
+/* Fade transition for overlay */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Slide transition for sidebar */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease;
+}
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateX(-100%);
+}
+</style>
