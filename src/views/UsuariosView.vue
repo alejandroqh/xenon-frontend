@@ -19,6 +19,11 @@ const error = ref<string | null>(null)
 const filtroActivo = ref<boolean | undefined>(undefined)
 const busqueda = ref('')
 
+// Modal state
+const modalDetallesAbierto = ref(false)
+const usuarioSeleccionado = ref<UsuarioResponse | null>(null)
+const cargandoDetalles = ref(false)
+
 /**
  * Fuzzy search: checks if all characters in the query appear in the text in order
  */
@@ -82,6 +87,34 @@ async function cargarUsuarios() {
 function cambiarFiltro(valor: boolean | undefined) {
   filtroActivo.value = valor
   cargarUsuarios()
+}
+
+async function verDetalles(id: string) {
+  modalDetallesAbierto.value = true
+  cargandoDetalles.value = true
+  usuarioSeleccionado.value = null
+  try {
+    usuarioSeleccionado.value = await usuariosApi.obtener(id)
+  } catch (err) {
+    console.error('Error al cargar detalles del usuario:', err)
+  } finally {
+    cargandoDetalles.value = false
+  }
+}
+
+function cerrarModalDetalles() {
+  modalDetallesAbierto.value = false
+  usuarioSeleccionado.value = null
+}
+
+function formatearFecha(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString('es-MX', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 const usuariosFiltrados = computed(() =>
@@ -285,7 +318,7 @@ onMounted(() => {
 
           <!-- Actions -->
           <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-end gap-1">
-            <button class="group relative p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <button @click="verDetalles(usuario.id)" class="group relative p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
               <EyeIcon class="w-5 h-5" />
               <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 Ver detalles
@@ -418,7 +451,7 @@ onMounted(() => {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right">
                   <div class="flex items-center justify-end gap-1">
-                    <button class="group relative p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                    <button @click="verDetalles(usuario.id)" class="group relative p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                       <EyeIcon class="w-4 h-4" />
                       <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         Ver detalles
@@ -455,5 +488,189 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Modal Ver Detalles -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="modalDetallesAbierto"
+          class="fixed inset-0 z-50 overflow-y-auto"
+          @click.self="cerrarModalDetalles"
+        >
+          <!-- Backdrop -->
+          <div class="fixed inset-0 bg-black/50 transition-opacity" @click="cerrarModalDetalles"></div>
+
+          <!-- Modal panel -->
+          <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+              <!-- Header -->
+              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Detalles del Usuario</h3>
+                <button
+                  @click="cerrarModalDetalles"
+                  class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <XMarkIcon class="w-5 h-5" />
+                </button>
+              </div>
+
+              <!-- Content -->
+              <div class="px-6 py-5 overflow-y-auto max-h-[calc(90vh-130px)]">
+                <!-- Loading state -->
+                <div v-if="cargandoDetalles" class="flex items-center justify-center py-12">
+                  <div class="flex items-center gap-3 text-gray-500">
+                    <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Cargando detalles...</span>
+                  </div>
+                </div>
+
+                <!-- User details -->
+                <div v-else-if="usuarioSeleccionado" class="space-y-6">
+                  <!-- User header -->
+                  <div class="flex items-center gap-4">
+                    <div class="flex-shrink-0">
+                      <img
+                        v-if="usuarioSeleccionado.imagen"
+                        :src="usuarioSeleccionado.imagen"
+                        :alt="usuarioSeleccionado.nombreCompleto"
+                        class="h-20 w-20 rounded-full object-cover"
+                      />
+                      <UserCircleIcon v-else class="h-20 w-20 text-gray-300" />
+                    </div>
+                    <div>
+                      <h4 class="text-xl font-semibold text-gray-900">{{ usuarioSeleccionado.nombreCompleto }}</h4>
+                      <p class="text-gray-500">@{{ usuarioSeleccionado.nombreUsuario }}</p>
+                      <div class="flex items-center gap-2 mt-2">
+                        <span
+                          :class="[
+                            'inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium',
+                            nivelColors[usuarioSeleccionado.nivel]
+                          ]"
+                        >
+                          {{ nivelLabels[usuarioSeleccionado.nivel] }}
+                        </span>
+                        <span
+                          :class="[
+                            'inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium',
+                            usuarioSeleccionado.activo
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          ]"
+                        >
+                          {{ usuarioSeleccionado.activo ? 'Activo' : 'Inactivo' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Contact info -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Email</p>
+                      <p class="text-sm font-medium text-gray-900">{{ usuarioSeleccionado.email }}</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Teléfono</p>
+                      <p class="text-sm font-medium text-gray-900">{{ usuarioSeleccionado.telefono || 'No registrado' }}</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Acceso App Móvil</p>
+                      <span
+                        :class="[
+                          'inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium',
+                          usuarioSeleccionado.accesoApp
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-500'
+                        ]"
+                      >
+                        {{ usuarioSeleccionado.accesoApp ? 'Habilitado' : 'Deshabilitado' }}
+                      </span>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">ID</p>
+                      <p class="text-sm font-medium text-gray-900 font-mono">{{ usuarioSeleccionado.id }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Permissions by sucursal -->
+                  <div>
+                    <h5 class="text-sm font-medium text-gray-900 mb-3">Permisos por Sucursal</h5>
+                    <div v-if="usuarioSeleccionado.permisosPorSucursal.length === 0" class="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
+                      Sin permisos asignados
+                    </div>
+                    <div v-else class="space-y-3">
+                      <div
+                        v-for="permiso in usuarioSeleccionado.permisosPorSucursal"
+                        :key="permiso.sucursalId"
+                        class="bg-gray-50 rounded-lg p-4"
+                      >
+                        <p class="text-sm font-medium text-gray-900 mb-2">{{ permiso.sucursalNombre }}</p>
+                        <div class="flex flex-wrap gap-1.5">
+                          <span
+                            v-for="(acciones, menu) in permiso.menus"
+                            :key="menu"
+                            :class="[
+                              'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium',
+                              acciones?.includes('edit')
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-blue-100 text-blue-700'
+                            ]"
+                          >
+                            {{ menu }}
+                            <span class="text-[10px] opacity-75">({{ acciones?.includes('edit') ? 'editar' : 'ver' }})</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Timestamps -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                    <div>
+                      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Creado</p>
+                      <p class="text-sm text-gray-700">{{ formatearFecha(usuarioSeleccionado.creadoEn) }}</p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Última actualización</p>
+                      <p class="text-sm text-gray-700">{{ formatearFecha(usuarioSeleccionado.actualizadoEn) }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Error state -->
+                <div v-else class="text-center py-12 text-gray-500">
+                  No se pudieron cargar los detalles del usuario
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <button
+                  @click="cerrarModalDetalles"
+                  class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+</style>
