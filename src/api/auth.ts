@@ -1,23 +1,12 @@
 import axios from 'axios'
+import type { Usuario, PermisosSucursal } from '@/types'
+
+// Re-export for backwards compatibility
+export type { Usuario, PermisosSucursal }
 
 // =============================================================================
-// Types
+// Auth API Types
 // =============================================================================
-
-export interface Usuario {
-  id: string
-  nombreCompleto: string
-  nombreUsuario: string
-  email: string
-  nivel: 'admin' | 'gerente' | 'vendedor' | 'operador' | 'visor'
-  imagen: string | null
-  permisosPorSucursal: PermisosSucursal[]
-}
-
-export interface PermisosSucursal {
-  sucursalId: string
-  menus: Partial<Record<string, ('view' | 'edit')[]>>
-}
 
 export interface LoginRequest {
   username: string
@@ -72,11 +61,16 @@ const MOCK_USERS: Record<string, { password: string; user: Usuario }> = {
       email: 'admin@xenon.com',
       nivel: 'admin',
       imagen: null,
+      telefono: null,
+      activo: true,
+      accesoApp: true,
       permisosPorSucursal: [
         { sucursalId: 'san-juan-del-rio', menus: TODOS_LOS_MENUS },
         { sucursalId: 'tamaulipas', menus: TODOS_LOS_MENUS },
         { sucursalId: 'monterrey', menus: TODOS_LOS_MENUS }
-      ]
+      ],
+      creadoEn: 1704067200,      // 2024-01-01 00:00:00 UTC
+      actualizadoEn: 1704067200
     }
   }
 }

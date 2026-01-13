@@ -1,26 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as authApi from '@/api/auth'
-import type { Usuario, PermisosSucursal } from '@/api/auth'
+import type {
+  Usuario,
+  PermisosSucursal,
+  PermisoAccion,
+  NivelUsuario,
+  MenuRuta
+} from '@/types'
 
 // Re-export types for convenience
-export type { Usuario, PermisosSucursal }
-export type PermisoAccion = 'view' | 'edit'
-export type NivelUsuario = 'admin' | 'gerente' | 'vendedor' | 'operador' | 'visor'
-
-export type MenuRuta =
-  | 'panel'
-  | 'importaciones'
-  | 'productos'
-  | 'inventario'
-  | 'clientes'
-  | 'rutas'
-  | 'promociones'
-  | 'reportes'
-  | 'estadisticas'
-  | 'auditoria'
-  | 'usuarios'
-  | 'configuracion'
+export type { Usuario, PermisosSucursal, PermisoAccion, NivelUsuario, MenuRuta }
 
 // Token refresh buffer (refresh 1 minute before expiration)
 const REFRESH_BUFFER_MS = 60 * 1000
