@@ -7,13 +7,47 @@ import {
   PencilSquareIcon,
   TrashIcon,
   KeyIcon,
-  EyeIcon
+  EyeIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
+  PlusIcon
 } from '@heroicons/vue/24/outline'
 
 const usuarios = ref<UsuarioResponse[]>([])
 const cargando = ref(true)
 const error = ref<string | null>(null)
 const filtroActivo = ref<boolean | undefined>(undefined)
+const busqueda = ref('')
+
+/**
+ * Fuzzy search: checks if all characters in the query appear in the text in order
+ */
+function fuzzyMatch(text: string, query: string): boolean {
+  const textLower = text.toLowerCase()
+  const queryLower = query.toLowerCase()
+
+  let textIndex = 0
+  let queryIndex = 0
+
+  while (textIndex < textLower.length && queryIndex < queryLower.length) {
+    if (textLower[textIndex] === queryLower[queryIndex]) {
+      queryIndex++
+    }
+    textIndex++
+  }
+
+  return queryIndex === queryLower.length
+}
+
+function usuarioMatchesBusqueda(usuario: UsuarioResponse, query: string): boolean {
+  if (!query.trim()) return true
+
+  return (
+    fuzzyMatch(usuario.nombreCompleto, query) ||
+    fuzzyMatch(usuario.nombreUsuario, query) ||
+    fuzzyMatch(usuario.email, query)
+  )
+}
 
 const nivelLabels: Record<NivelUsuario, string> = {
   admin: 'Administrador',
@@ -50,7 +84,9 @@ function cambiarFiltro(valor: boolean | undefined) {
   cargarUsuarios()
 }
 
-const usuariosFiltrados = computed(() => usuarios.value)
+const usuariosFiltrados = computed(() =>
+  usuarios.value.filter((usuario) => usuarioMatchesBusqueda(usuario, busqueda.value))
+)
 
 onMounted(() => {
   cargarUsuarios()
@@ -67,42 +103,73 @@ onMounted(() => {
       </p>
     </div>
 
-    <!-- Filters -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-2 -mb-2">
-      <span class="text-sm text-gray-500 flex-shrink-0">Filtrar:</span>
-      <button
-        @click="cambiarFiltro(undefined)"
-        :class="[
-          'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0',
-          filtroActivo === undefined
-            ? 'bg-primary-100 text-primary-700'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-        ]"
-      >
-        Todos
-      </button>
-      <button
-        @click="cambiarFiltro(true)"
-        :class="[
-          'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0',
-          filtroActivo === true
-            ? 'bg-green-100 text-green-700'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-        ]"
-      >
-        Activos
-      </button>
-      <button
-        @click="cambiarFiltro(false)"
-        :class="[
-          'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0',
-          filtroActivo === false
-            ? 'bg-red-100 text-red-700'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-        ]"
-      >
-        Inactivos
-      </button>
+    <!-- Search, Filters and Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+      <!-- Search input -->
+      <div class="relative flex-1 max-w-md">
+        <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+        <input
+          v-model="busqueda"
+          type="text"
+          placeholder="Buscar por nombre, usuario o email..."
+          class="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+        />
+        <button
+          v-if="busqueda"
+          @click="busqueda = ''"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        >
+          <XMarkIcon class="h-5 w-5" />
+        </button>
+      </div>
+
+      <!-- Status filters -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 -mb-2 sm:mb-0">
+        <span class="text-sm text-gray-500 flex-shrink-0">Estado:</span>
+        <button
+          @click="cambiarFiltro(undefined)"
+          :class="[
+            'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0',
+            filtroActivo === undefined
+              ? 'bg-primary-100 text-primary-700'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          ]"
+        >
+          Todos
+        </button>
+        <button
+          @click="cambiarFiltro(true)"
+          :class="[
+            'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0',
+            filtroActivo === true
+              ? 'bg-green-100 text-green-700'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          ]"
+        >
+          Activos
+        </button>
+        <button
+          @click="cambiarFiltro(false)"
+          :class="[
+            'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0',
+            filtroActivo === false
+              ? 'bg-red-100 text-red-700'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          ]"
+        >
+          Inactivos
+        </button>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2 sm:ml-auto">
+        <button
+          class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
+        >
+          <PlusIcon class="h-5 w-5" />
+          <span>Crear Usuario</span>
+        </button>
+      </div>
     </div>
 
     <!-- Loading state -->
