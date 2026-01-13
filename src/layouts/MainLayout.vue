@@ -24,8 +24,9 @@ const router = useRouter()
 const sucursalStore = useSucursalStore()
 const authStore = useAuthStore()
 
-function cerrarSesion() {
-  authStore.cerrarSesion()
+async function cerrarSesion() {
+  await authStore.cerrarSesion()
+  sucursalStore.$reset()
   router.push('/login')
 }
 

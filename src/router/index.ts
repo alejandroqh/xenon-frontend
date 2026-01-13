@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useSucursalStore } from '@/stores/sucursal'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -97,10 +98,16 @@ const router = createRouter({
 
 router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
+  const sucursalStore = useSucursalStore()
 
   // Wait for auth initialization before making routing decisions
   if (!authStore.inicializado) {
     await authStore.inicializar()
+  }
+
+  // Load sucursales after auth is initialized and user is authenticated
+  if (authStore.estaAutenticado && sucursalStore.sucursales.length === 0) {
+    await sucursalStore.inicializar()
   }
 
   // Redirect unauthenticated users to login

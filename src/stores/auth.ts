@@ -99,6 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
       usuario.value = response.user
       setRefreshToken(response.refreshToken)
       scheduleTokenRefresh(response.expiresIn)
+      inicializado.value = true
 
       cargando.value = false
       return true
