@@ -10,7 +10,10 @@ import {
   EyeIcon,
   MagnifyingGlassIcon,
   XMarkIcon,
-  PlusIcon
+  PlusIcon,
+  ChevronDownIcon,
+  NoSymbolIcon,
+  CheckCircleIcon
 } from '@heroicons/vue/24/outline'
 
 const usuarios = ref<UsuarioResponse[]>([])
@@ -23,6 +26,24 @@ const busqueda = ref('')
 const modalDetallesAbierto = ref(false)
 const usuarioSeleccionado = ref<UsuarioResponse | null>(null)
 const cargandoDetalles = ref(false)
+const permisosExpandidos = ref<Record<string, boolean>>({})
+
+// Toggle status modal state
+const modalEstadoAbierto = ref(false)
+const usuarioParaCambiarEstado = ref<UsuarioResponse | null>(null)
+const cambiandoEstado = ref(false)
+
+function togglePermiso(sucursalId: string) {
+  permisosExpandidos.value[sucursalId] = !permisosExpandidos.value[sucursalId]
+}
+
+function contarPermisos(menus: Record<string, string[]>): { total: number; editar: number; ver: number } {
+  const entries = Object.entries(menus)
+  const total = entries.length
+  const editar = entries.filter(([_, acciones]) => acciones?.includes('edit')).length
+  const ver = total - editar
+  return { total, editar, ver }
+}
 
 /**
  * Fuzzy search: checks if all characters in the query appear in the text in order
@@ -105,6 +126,40 @@ async function verDetalles(id: string) {
 function cerrarModalDetalles() {
   modalDetallesAbierto.value = false
   usuarioSeleccionado.value = null
+  permisosExpandidos.value = {}
+}
+
+function abrirModalCambiarEstado(usuario: UsuarioResponse) {
+  usuarioParaCambiarEstado.value = usuario
+  modalEstadoAbierto.value = true
+}
+
+function cerrarModalEstado() {
+  modalEstadoAbierto.value = false
+  usuarioParaCambiarEstado.value = null
+}
+
+async function confirmarCambioEstado() {
+  if (!usuarioParaCambiarEstado.value) return
+
+  cambiandoEstado.value = true
+  try {
+    const nuevoEstado = !usuarioParaCambiarEstado.value.activo
+    await usuariosApi.actualizar(usuarioParaCambiarEstado.value.id, { activo: nuevoEstado })
+
+    // Update the user in the local list
+    const index = usuarios.value.findIndex(u => u.id === usuarioParaCambiarEstado.value!.id)
+    const usuario = usuarios.value[index]
+    if (usuario) {
+      usuario.activo = nuevoEstado
+    }
+
+    cerrarModalEstado()
+  } catch (err) {
+    console.error('Error al cambiar estado del usuario:', err)
+  } finally {
+    cambiandoEstado.value = false
+  }
 }
 
 function formatearFecha(timestamp: number): string {
@@ -336,6 +391,21 @@ onMounted(() => {
                 Contraseña
               </span>
             </button>
+            <button
+              @click="abrirModalCambiarEstado(usuario)"
+              :class="[
+                'group relative p-2 rounded-lg transition-colors cursor-pointer',
+                usuario.activo
+                  ? 'text-gray-400 hover:text-orange-600 hover:bg-orange-50'
+                  : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+              ]"
+            >
+              <NoSymbolIcon v-if="usuario.activo" class="w-5 h-5" />
+              <CheckCircleIcon v-else class="w-5 h-5" />
+              <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                {{ usuario.activo ? 'Desactivar' : 'Activar' }}
+              </span>
+            </button>
             <button class="group relative p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer">
               <TrashIcon class="w-5 h-5" />
               <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -467,6 +537,21 @@ onMounted(() => {
                       <KeyIcon class="w-4 h-4" />
                       <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         Contraseña
+                      </span>
+                    </button>
+                    <button
+                      @click="abrirModalCambiarEstado(usuario)"
+                      :class="[
+                        'group relative p-1.5 rounded-lg transition-colors cursor-pointer',
+                        usuario.activo
+                          ? 'text-gray-400 hover:text-orange-600 hover:bg-orange-50'
+                          : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                      ]"
+                    >
+                      <NoSymbolIcon v-if="usuario.activo" class="w-4 h-4" />
+                      <CheckCircleIcon v-else class="w-4 h-4" />
+                      <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        {{ usuario.activo ? 'Desactivar' : 'Activar' }}
                       </span>
                     </button>
                     <button class="group relative p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer">
@@ -601,28 +686,63 @@ onMounted(() => {
                     <div v-if="usuarioSeleccionado.permisosPorSucursal.length === 0" class="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
                       Sin permisos asignados
                     </div>
-                    <div v-else class="space-y-3">
+                    <div v-else class="border border-gray-200 rounded-lg overflow-hidden divide-y divide-gray-200">
                       <div
                         v-for="permiso in usuarioSeleccionado.permisosPorSucursal"
                         :key="permiso.sucursalId"
-                        class="bg-gray-50 rounded-lg p-4"
                       >
-                        <p class="text-sm font-medium text-gray-900 mb-2">{{ permiso.sucursalNombre }}</p>
-                        <div class="flex flex-wrap gap-1.5">
-                          <span
-                            v-for="(acciones, menu) in permiso.menus"
-                            :key="menu"
+                        <!-- Accordion header -->
+                        <button
+                          @click="togglePermiso(permiso.sucursalId)"
+                          class="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors text-left cursor-pointer"
+                        >
+                          <div class="flex items-center gap-3">
+                            <span class="text-sm font-medium text-gray-900">{{ permiso.sucursalNombre }}</span>
+                            <div class="flex items-center gap-1.5">
+                              <span
+                                v-if="contarPermisos(permiso.menus).editar > 0"
+                                class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700"
+                              >
+                                {{ contarPermisos(permiso.menus).editar }} editar
+                              </span>
+                              <span
+                                v-if="contarPermisos(permiso.menus).ver > 0"
+                                class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700"
+                              >
+                                {{ contarPermisos(permiso.menus).ver }} ver
+                              </span>
+                            </div>
+                          </div>
+                          <ChevronDownIcon
                             :class="[
-                              'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium',
-                              acciones?.includes('edit')
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-blue-100 text-blue-700'
+                              'w-4 h-4 text-gray-400 transition-transform duration-200',
+                              permisosExpandidos[permiso.sucursalId] ? 'rotate-180' : ''
                             ]"
+                          />
+                        </button>
+                        <!-- Accordion content -->
+                        <Transition name="accordion">
+                          <div
+                            v-if="permisosExpandidos[permiso.sucursalId]"
+                            class="px-4 py-3 bg-gray-50 border-t border-gray-100"
                           >
-                            {{ menu }}
-                            <span class="text-[10px] opacity-75">({{ acciones?.includes('edit') ? 'editar' : 'ver' }})</span>
-                          </span>
-                        </div>
+                            <div class="flex flex-wrap gap-1.5">
+                              <span
+                                v-for="(acciones, menu) in permiso.menus"
+                                :key="menu"
+                                :class="[
+                                  'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium',
+                                  acciones?.includes('edit')
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-blue-100 text-blue-700'
+                                ]"
+                              >
+                                {{ menu }}
+                                <span class="text-[10px] opacity-75">({{ acciones?.includes('edit') ? 'editar' : 'ver' }})</span>
+                              </span>
+                            </div>
+                          </div>
+                        </Transition>
                       </div>
                     </div>
                   </div>
@@ -659,6 +779,92 @@ onMounted(() => {
           </div>
         </div>
       </Transition>
+
+      <!-- Modal Cambiar Estado -->
+      <Transition name="modal">
+        <div
+          v-if="modalEstadoAbierto"
+          class="fixed inset-0 z-50 overflow-y-auto"
+          @click.self="cerrarModalEstado"
+        >
+          <!-- Backdrop -->
+          <div class="fixed inset-0 bg-black/50 transition-opacity" @click="cerrarModalEstado"></div>
+
+          <!-- Modal panel -->
+          <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full">
+              <!-- Header -->
+              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">
+                  {{ usuarioParaCambiarEstado?.activo ? 'Desactivar Usuario' : 'Activar Usuario' }}
+                </h3>
+                <button
+                  @click="cerrarModalEstado"
+                  class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <XMarkIcon class="w-5 h-5" />
+                </button>
+              </div>
+
+              <!-- Content -->
+              <div class="px-6 py-5">
+                <div class="flex items-start gap-4">
+                  <div
+                    :class="[
+                      'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center',
+                      usuarioParaCambiarEstado?.activo ? 'bg-orange-100' : 'bg-green-100'
+                    ]"
+                  >
+                    <NoSymbolIcon v-if="usuarioParaCambiarEstado?.activo" class="w-5 h-5 text-orange-600" />
+                    <CheckCircleIcon v-else class="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p class="text-sm text-gray-700">
+                      <template v-if="usuarioParaCambiarEstado?.activo">
+                        ¿Estás seguro de que deseas desactivar al usuario
+                        <span class="font-semibold">{{ usuarioParaCambiarEstado?.nombreCompleto }}</span>?
+                        El usuario no podrá acceder al sistema mientras esté desactivado.
+                      </template>
+                      <template v-else>
+                        ¿Estás seguro de que deseas activar al usuario
+                        <span class="font-semibold">{{ usuarioParaCambiarEstado?.nombreCompleto }}</span>?
+                        El usuario podrá acceder al sistema nuevamente.
+                      </template>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                <button
+                  @click="cerrarModalEstado"
+                  :disabled="cambiandoEstado"
+                  class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  @click="confirmarCambioEstado"
+                  :disabled="cambiandoEstado"
+                  :class="[
+                    'w-full sm:w-auto px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2',
+                    usuarioParaCambiarEstado?.activo
+                      ? 'bg-orange-600 hover:bg-orange-700'
+                      : 'bg-green-600 hover:bg-green-700'
+                  ]"
+                >
+                  <svg v-if="cambiandoEstado" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {{ usuarioParaCambiarEstado?.activo ? 'Desactivar' : 'Activar' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -672,5 +878,25 @@ onMounted(() => {
 .modal-enter-from,
 .modal-leave-to {
   opacity: 0;
+}
+
+.accordion-enter-active,
+.accordion-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.accordion-enter-from,
+.accordion-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.accordion-enter-to,
+.accordion-leave-from {
+  opacity: 1;
+  max-height: 200px;
 }
 </style>
