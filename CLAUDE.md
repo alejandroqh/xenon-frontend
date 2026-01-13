@@ -122,3 +122,61 @@ authStore.menuDeshabilitado(sucursalId, menu)  // is menu disabled?
 ### Navigation Filtering
 
 `MainLayout.vue` filters sidebar navigation based on `puedeVer()` for the current sucursal. Menu items without view permission are hidden.
+
+## Backend API Reference
+
+**Base URL:** `http://localhost:3000` (configurable via `VITE_API_URL`)
+**Documentation:** `http://localhost:3000/docs`
+
+### Auth Endpoints
+
+| Method | Endpoint | Body | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/login` | `{ username, password }` | Login |
+| POST | `/api/auth/refresh` | `{ refreshToken }` | Refresh access token |
+| POST | `/api/auth/logout` | `{ refreshToken? }` | Logout |
+| GET | `/api/auth/me` | - | Get current user |
+
+### Sucursales (Branches)
+
+| Method | Endpoint | Body/Params | Description |
+|--------|----------|-------------|-------------|
+| GET | `/api/sucursales/` | `?activo` (optional) | List branches |
+| POST | `/api/sucursales/` | `{ id, nombre, direccion?, telefono?, activo? }` | Create branch |
+| GET | `/api/sucursales/{id}` | - | Get branch |
+| PATCH | `/api/sucursales/{id}` | `{ nombre?, direccion?, telefono?, activo? }` | Update branch |
+| DELETE | `/api/sucursales/{id}` | - | Delete branch |
+
+### Usuarios (Users)
+
+| Method | Endpoint | Body/Params | Description |
+|--------|----------|-------------|-------------|
+| GET | `/api/usuarios/` | `?activo` (optional) | List users |
+| POST | `/api/usuarios/` | See schema below | Create user |
+| GET | `/api/usuarios/{id}` | - | Get user |
+| PATCH | `/api/usuarios/{id}` | See schema below | Update user |
+
+**User Schema:**
+```typescript
+{
+  nombreCompleto: string      // required on create
+  nombreUsuario: string       // required on create
+  email: string               // email format, required on create
+  contrasena: string          // min 6 chars, required on create
+  nivel: 'admin' | 'gerente' | 'vendedor' | 'operador' | 'visor'
+  imagen?: string | null
+  telefono?: string | null
+  accesoApp?: boolean
+  activo?: boolean            // update only
+  permisosPorSucursal: Array<{
+    sucursalId: string
+    menus: Record<MenuRuta, ('view' | 'edit')[]>
+  }>
+}
+```
+
+### Health Check
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Server health status |

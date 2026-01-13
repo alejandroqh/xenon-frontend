@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import moment from 'moment'
 // @ts-ignore
 import 'moment/dist/locale/es-mx.js'
+import Swal from 'sweetalert2'
 
 import * as usuariosApi from '@/api/usuarios'
 import type { UsuarioResponse, NivelUsuario } from '@/types'
@@ -42,18 +43,24 @@ const cambiandoEstado = ref(false)
 const modalFormAbierto = ref(false)
 const usuarioParaEditar = ref<UsuarioResponse | null>(null)
 
-// Toast notification state
-const toastVisible = ref(false)
-const toastMensaje = ref('')
-let toastTimeout: ReturnType<typeof setTimeout> | null = null
+// SweetAlert2 toast configuration
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'center',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer
+    toast.onmouseleave = Swal.resumeTimer
+  }
+})
 
-function mostrarToast(mensaje: string) {
-  toastMensaje.value = mensaje
-  toastVisible.value = true
-  if (toastTimeout) clearTimeout(toastTimeout)
-  toastTimeout = setTimeout(() => {
-    toastVisible.value = false
-  }, 3000)
+function mostrarToast(mensaje: string, icono: 'success' | 'error' | 'warning' | 'info' = 'success') {
+  Toast.fire({
+    icon: icono,
+    title: mensaje
+  })
 }
 
 function togglePermiso(sucursalId: string) {
@@ -932,19 +939,6 @@ onMounted(() => {
       @cerrar="cerrarModalForm"
       @guardado="onUsuarioGuardado"
     />
-
-    <!-- Toast Notification -->
-    <Teleport to="body">
-      <Transition name="toast">
-        <div
-          v-if="toastVisible"
-          class="fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 bg-green-600 text-white rounded-lg shadow-lg"
-        >
-          <CheckCircleIcon class="w-5 h-5 flex-shrink-0" />
-          <span class="text-sm font-medium">{{ toastMensaje }}</span>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
@@ -977,16 +971,5 @@ onMounted(() => {
 .accordion-leave-from {
   opacity: 1;
   max-height: 200px;
-}
-
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.3s ease;
-}
-
-.toast-enter-from,
-.toast-leave-to {
-  opacity: 0;
-  transform: translateY(-1rem);
 }
 </style>
