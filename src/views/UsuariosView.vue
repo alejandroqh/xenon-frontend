@@ -162,7 +162,7 @@ onMounted(() => {
         <button
           @click="cambiarFiltro(undefined)"
           :class="[
-            'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0',
+            'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0 cursor-pointer',
             filtroActivo === undefined
               ? 'bg-primary-100 text-primary-700'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -173,7 +173,7 @@ onMounted(() => {
         <button
           @click="cambiarFiltro(true)"
           :class="[
-            'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0',
+            'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0 cursor-pointer',
             filtroActivo === true
               ? 'bg-green-100 text-green-700'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -184,7 +184,7 @@ onMounted(() => {
         <button
           @click="cambiarFiltro(false)"
           :class="[
-            'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0',
+            'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex-shrink-0 cursor-pointer',
             filtroActivo === false
               ? 'bg-red-100 text-red-700'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -197,7 +197,7 @@ onMounted(() => {
       <!-- Actions -->
       <div class="flex items-center gap-2 sm:ml-auto">
         <button
-          class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
+          class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors cursor-pointer"
         >
           <PlusIcon class="h-5 w-5" />
           <span>Crear Usuario</span>
@@ -318,25 +318,25 @@ onMounted(() => {
 
           <!-- Actions -->
           <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-end gap-1">
-            <button @click="verDetalles(usuario.id)" class="group relative p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <button @click="verDetalles(usuario.id)" class="group relative p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer">
               <EyeIcon class="w-5 h-5" />
               <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 Ver detalles
               </span>
             </button>
-            <button class="group relative p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+            <button class="group relative p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer">
               <PencilSquareIcon class="w-5 h-5" />
               <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 Editar
               </span>
             </button>
-            <button class="group relative p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+            <button class="group relative p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer">
               <KeyIcon class="w-5 h-5" />
               <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 Contraseña
               </span>
             </button>
-            <button class="group relative p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+            <button class="group relative p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer">
               <TrashIcon class="w-5 h-5" />
               <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 Eliminar
@@ -451,25 +451,25 @@ onMounted(() => {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right">
                   <div class="flex items-center justify-end gap-1">
-                    <button @click="verDetalles(usuario.id)" class="group relative p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                    <button @click="verDetalles(usuario.id)" class="group relative p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer">
                       <EyeIcon class="w-4 h-4" />
                       <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         Ver detalles
                       </span>
                     </button>
-                    <button class="group relative p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+                    <button class="group relative p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer">
                       <PencilSquareIcon class="w-4 h-4" />
                       <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         Editar
                       </span>
                     </button>
-                    <button class="group relative p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                    <button class="group relative p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer">
                       <KeyIcon class="w-4 h-4" />
                       <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         Contraseña
                       </span>
                     </button>
-                    <button class="group relative p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button class="group relative p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer">
                       <TrashIcon class="w-4 h-4" />
                       <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         Eliminar
