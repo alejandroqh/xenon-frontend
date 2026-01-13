@@ -1,10 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import * as authApi from '@/api/auth'
+import type { Usuario, PermisosSucursal } from '@/api/auth'
 
-// Permission actions for each menu item
+// Re-export types for convenience
+export type { Usuario, PermisosSucursal }
 export type PermisoAccion = 'view' | 'edit'
+export type NivelUsuario = 'admin' | 'gerente' | 'vendedor' | 'operador' | 'visor'
 
-// All available menu routes
 export type MenuRuta =
   | 'panel'
   | 'importaciones'
@@ -19,105 +22,155 @@ export type MenuRuta =
   | 'usuarios'
   | 'configuracion'
 
-// User level/role
-export type NivelUsuario = 'admin' | 'gerente' | 'vendedor' | 'operador' | 'visor'
-
-// Permission map: menu -> allowed actions (empty array = disabled/no access)
-export type MapaPermisosMenu = Partial<Record<MenuRuta, PermisoAccion[]>>
-
-// Permissions for a specific sucursal
-export interface PermisosSucursal {
-  sucursalId: string
-  menus: MapaPermisosMenu
-}
-
-export interface Usuario {
-  id: string
-  nombreCompleto: string
-  nombreUsuario: string
-  email: string
-  nivel: NivelUsuario
-  imagen: string | null
-  // Sucursales the user has access to with their specific permissions
-  permisosPorSucursal: PermisosSucursal[]
-}
-
-// All menu permissions (view + edit)
-const TODOS_LOS_MENUS: MapaPermisosMenu = {
-  panel: ['view', 'edit'],
-  importaciones: ['view', 'edit'],
-  productos: ['view', 'edit'],
-  inventario: ['view', 'edit'],
-  clientes: ['view', 'edit'],
-  rutas: ['view', 'edit'],
-  promociones: ['view', 'edit'],
-  reportes: ['view', 'edit'],
-  estadisticas: ['view', 'edit'],
-  auditoria: ['view', 'edit'],
-  usuarios: ['view', 'edit'],
-  configuracion: ['view', 'edit']
-}
-
-// Admin has full access to all sucursales
-const PERMISOS_ADMIN: PermisosSucursal[] = [
-  { sucursalId: 'san-juan-del-rio', menus: TODOS_LOS_MENUS },
-  { sucursalId: 'tamaulipas', menus: TODOS_LOS_MENUS },
-  { sucursalId: 'monterrey', menus: TODOS_LOS_MENUS }
-]
-
-// TODO: Remove hardcoded credentials when backend is enabled
-const MOCK_CREDENTIALS = { username: 'admin', password: 'admin' }
-const MOCK_TOKEN = 'mock-jwt-token'
-const MOCK_USUARIO: Usuario = {
-  id: '1',
-  nombreCompleto: 'Administrador del Sistema',
-  nombreUsuario: 'admin',
-  email: 'admin@xenon.com',
-  nivel: 'admin',
-  imagen: null,
-  permisosPorSucursal: PERMISOS_ADMIN
-}
+// Token refresh buffer (refresh 1 minute before expiration)
+const REFRESH_BUFFER_MS = 60 * 1000
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string | null>(localStorage.getItem('auth_token'))
-  const usuario = ref<Usuario | null>(token.value ? MOCK_USUARIO : null)
+  // Access token stored in memory only (not localStorage) for security
+  // This means users need to re-login on page refresh unless refresh token is valid
+  let accessToken: string | null = null
+  let refreshTimer: ReturnType<typeof setTimeout> | null = null
+
+  // Refresh token in localStorage (in production, use HttpOnly cookie)
+  const getRefreshToken = () => localStorage.getItem('refresh_token')
+  const setRefreshToken = (token: string | null) => {
+    if (token) {
+      localStorage.setItem('refresh_token', token)
+    } else {
+      localStorage.removeItem('refresh_token')
+    }
+  }
+
+  const usuario = ref<Usuario | null>(null)
   const cargando = ref(false)
   const error = ref<string | null>(null)
+  const inicializado = ref(false)
 
-  const estaAutenticado = computed(() => !!token.value)
+  const estaAutenticado = computed(() => !!usuario.value && !!accessToken)
+
+  // Get current access token (for API client)
+  function getAccessToken(): string | null {
+    return accessToken
+  }
+
+  // Schedule token refresh before expiration
+  function scheduleTokenRefresh(expiresIn: number) {
+    if (refreshTimer) {
+      clearTimeout(refreshTimer)
+    }
+
+    const refreshIn = Math.max((expiresIn * 1000) - REFRESH_BUFFER_MS, 0)
+    refreshTimer = setTimeout(async () => {
+      await refrescarToken()
+    }, refreshIn)
+  }
+
+  // Refresh access token using refresh token
+  async function refrescarToken(): Promise<boolean> {
+    const refreshToken = getRefreshToken()
+    if (!refreshToken) {
+      return false
+    }
+
+    try {
+      const response = await authApi.refresh(refreshToken)
+      accessToken = response.accessToken
+      scheduleTokenRefresh(response.expiresIn)
+      return true
+    } catch {
+      // Refresh failed, clear everything
+      limpiarSesion()
+      return false
+    }
+  }
+
+  // Clear session data without API call
+  function limpiarSesion() {
+    accessToken = null
+    usuario.value = null
+    setRefreshToken(null)
+    if (refreshTimer) {
+      clearTimeout(refreshTimer)
+      refreshTimer = null
+    }
+  }
 
   async function iniciarSesion(nombreUsuario: string, contrasena: string): Promise<boolean> {
     cargando.value = true
     error.value = null
 
-    // TODO: Replace with API call when backend is enabled
-    // const response = await apiClient.post('/auth/login', { username, password })
-    await new Promise(resolve => setTimeout(resolve, 500)) // Simulate network delay
+    try {
+      const response = await authApi.login({
+        username: nombreUsuario,
+        password: contrasena
+      })
 
-    if (nombreUsuario === MOCK_CREDENTIALS.username && contrasena === MOCK_CREDENTIALS.password) {
-      token.value = MOCK_TOKEN
-      usuario.value = MOCK_USUARIO
-      localStorage.setItem('auth_token', MOCK_TOKEN)
+      accessToken = response.accessToken
+      usuario.value = response.user
+      setRefreshToken(response.refreshToken)
+      scheduleTokenRefresh(response.expiresIn)
+
       cargando.value = false
       return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al iniciar sesión'
+      error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || message
+      cargando.value = false
+      return false
+    }
+  }
+
+  async function cerrarSesion() {
+    cargando.value = true
+
+    try {
+      // Call logout API to invalidate tokens server-side
+      if (accessToken) {
+        await authApi.logout(accessToken, getRefreshToken())
+      }
+    } catch {
+      // Ignore logout errors, clear local state anyway
+    } finally {
+      limpiarSesion()
+      cargando.value = false
+    }
+  }
+
+  // Initialize auth state on app startup
+  async function inicializar(): Promise<boolean> {
+    if (inicializado.value) {
+      return estaAutenticado.value
     }
 
-    error.value = 'Credenciales invalidas'
-    cargando.value = false
-    return false
-  }
+    cargando.value = true
 
-  function cerrarSesion() {
-    token.value = null
-    usuario.value = null
-    localStorage.removeItem('auth_token')
-  }
+    try {
+      // Try to refresh token if we have one
+      const refreshToken = getRefreshToken()
+      if (!refreshToken) {
+        inicializado.value = true
+        cargando.value = false
+        return false
+      }
 
-  function inicializar() {
-    // TODO: Replace with API call when backend is enabled
-    // const response = await apiClient.get('/auth/me')
-    if (token.value) {
-      usuario.value = MOCK_USUARIO
+      // Get new access token
+      const refreshed = await refrescarToken()
+      if (!refreshed || !accessToken) {
+        inicializado.value = true
+        cargando.value = false
+        return false
+      }
+
+      // Validate token and get user data
+      usuario.value = await authApi.getMe(accessToken)
+      inicializado.value = true
+      cargando.value = false
+      return true
+    } catch {
+      limpiarSesion()
+      inicializado.value = true
+      cargando.value = false
+      return false
     }
   }
 
@@ -166,15 +219,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    token,
     usuario,
     cargando,
     error,
+    inicializado,
     estaAutenticado,
     sucursalesAccesibles,
+    getAccessToken,
     iniciarSesion,
     cerrarSesion,
     inicializar,
+    refrescarToken,
     tieneAccesoSucursal,
     obtenerPermisosSucursal,
     tienePermiso,

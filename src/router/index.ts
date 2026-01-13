@@ -95,14 +95,21 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
 
+  // Wait for auth initialization before making routing decisions
+  if (!authStore.inicializado) {
+    await authStore.inicializar()
+  }
+
+  // Redirect unauthenticated users to login
   if (to.meta.requiresAuth !== false && !authStore.estaAutenticado) {
     next({ name: 'Login' })
     return
   }
 
+  // Redirect authenticated users away from login
   if (to.name === 'Login' && authStore.estaAutenticado) {
     next({ name: 'Panel' })
     return
