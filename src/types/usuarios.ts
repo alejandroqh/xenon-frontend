@@ -38,6 +38,13 @@ export interface PermisosSucursal {
 }
 
 /**
+ * Permissions for a specific sucursal (API response with sucursal name)
+ */
+export interface PermisosSucursalResponse extends PermisosSucursal {
+  sucursalNombre: string
+}
+
+/**
  * User entity
  */
 export interface Usuario {
@@ -53,6 +60,13 @@ export interface Usuario {
   permisosPorSucursal: PermisosSucursal[]
   creadoEn: number      // Unix timestamp
   actualizadoEn: number // Unix timestamp
+}
+
+/**
+ * User entity from API response (includes sucursalNombre in permissions)
+ */
+export interface UsuarioResponse extends Omit<Usuario, 'permisosPorSucursal'> {
+  permisosPorSucursal: PermisosSucursalResponse[]
 }
 
 /**
