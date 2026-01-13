@@ -67,6 +67,30 @@ const menuOptions: { value: MenuRuta; label: string }[] = [
   { value: 'configuracion', label: 'Configuracion' }
 ]
 
+// Default permissions per user level
+const permisosDefaultPorNivel: Record<NivelUsuario, { menus: MenuRuta[]; acciones: PermisoAccion[] }> = {
+  admin: {
+    menus: ['panel', 'importaciones', 'productos', 'inventario', 'clientes', 'rutas', 'promociones', 'reportes', 'estadisticas', 'auditoria', 'usuarios', 'configuracion'],
+    acciones: ['view', 'edit']
+  },
+  gerente: {
+    menus: ['panel', 'importaciones', 'productos', 'inventario', 'clientes', 'rutas', 'promociones', 'reportes', 'estadisticas', 'auditoria'],
+    acciones: ['view', 'edit']
+  },
+  vendedor: {
+    menus: ['panel', 'productos', 'clientes', 'promociones', 'reportes'],
+    acciones: ['view', 'edit']
+  },
+  operador: {
+    menus: ['panel', 'importaciones', 'productos', 'inventario', 'rutas'],
+    acciones: ['view', 'edit']
+  },
+  visor: {
+    menus: ['panel', 'productos', 'inventario', 'clientes', 'reportes', 'estadisticas'],
+    acciones: ['view']
+  }
+}
+
 // Sucursales not yet added to permissions
 const sucursalesDisponibles = computed(() => {
   const idsAsignados = new Set(permisosPorSucursal.value.map(p => p.sucursalId))
@@ -124,9 +148,17 @@ function togglePermiso(sucursalId: string) {
 }
 
 function agregarSucursal(sucursalId: string) {
+  // Auto-populate permissions based on current nivel
+  const defaults = permisosDefaultPorNivel[nivel.value]
+  const menus: Partial<Record<MenuRuta, PermisoAccion[]>> = {}
+
+  for (const menu of defaults.menus) {
+    menus[menu] = [...defaults.acciones]
+  }
+
   permisosPorSucursal.value.push({
     sucursalId,
-    menus: {}
+    menus
   })
   permisosExpandidos.value[sucursalId] = true
 }
@@ -235,8 +267,11 @@ async function guardar() {
     }
 
     emit('guardado', resultado)
-  } catch (err) {
-    errorForm.value = err instanceof Error ? err.message : 'Error al guardar usuario'
+  } catch (err: unknown) {
+    // Extract error message from API response or fallback to generic message
+    const axiosError = err as { response?: { data?: { message?: string } } }
+    errorForm.value = axiosError.response?.data?.message
+      || (err instanceof Error ? err.message : 'Error al guardar usuario')
   } finally {
     guardando.value = false
   }

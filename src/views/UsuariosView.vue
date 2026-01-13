@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import moment from 'moment'
+// @ts-ignore
+import 'moment/dist/locale/es-mx.js'
+
 import * as usuariosApi from '@/api/usuarios'
 import type { UsuarioResponse, NivelUsuario } from '@/types'
 import { UserCircleIcon } from '@heroicons/vue/24/solid'
@@ -197,13 +201,7 @@ function onUsuarioGuardado(usuario: UsuarioResponse) {
 }
 
 function formatearFecha(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString('es-MX', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  return moment.unix(timestamp).locale('es-mx').format('D [de] MMMM [de] YYYY, HH:mm')
 }
 
 const usuariosFiltrados = computed(() =>
