@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { XMarkIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
 import * as clientesApi from '@/api/clientes'
-import type { Cliente, TipoPersona, CrearClienteRequest } from '@/types'
+import * as catalogosApi from '@/api/catalogos'
+import { useSucursalStore } from '@/stores/sucursal'
+import type { Cliente, TipoPersona, CrearClienteRequest, RegimenFiscal, TipoIdentificacion } from '@/types'
 
 const props = defineProps<{
   abierto: boolean
@@ -14,9 +16,22 @@ const emit = defineEmits<{
   guardado: [cliente: Cliente]
 }>()
 
+// Sucursal store for country detection
+const sucursalStore = useSucursalStore()
+
 // Form state
 const guardando = ref(false)
 const errorForm = ref<string | null>(null)
+const cargandoCatalogos = ref(false)
+
+// Dynamic catalog options
+const regimenesFiscalesOptions = ref<RegimenFiscal[]>([])
+const tiposIdentificacionOptions = ref<TipoIdentificacion[]>([])
+
+// Country derived from sucursal
+const paisActual = computed(() => sucursalStore.sucursalActual?.pais ?? 'MX')
+const esMexico = computed(() => paisActual.value === 'MX')
+const esEcuador = computed(() => paisActual.value === 'EC')
 
 // Collapsible sections
 const seccionesExpandidas = ref({
@@ -31,10 +46,12 @@ const nombre = ref('')
 const razonSocial = ref('')
 const tipoPersona = ref<TipoPersona | ''>('')
 
-// Form fields - Fiscal
-const rfc = ref('')
+// Form fields - Fiscal/Identification
+const rfc = ref('')  // Mexico: RFC, Ecuador: RUC/Cedula
 const regimenFiscal = ref('')
 const usoCfdi = ref('')
+const tipoIdentificacion = ref('')
+const numeroIdentificacion = ref('')
 
 // Form fields - Contact
 const email = ref('')
@@ -58,27 +75,35 @@ const tipoPersonaOptions: { value: TipoPersona; label: string }[] = [
   { value: 'moral', label: 'Persona Moral' }
 ]
 
-const regimenFiscalOptions: { value: string; label: string }[] = [
-  { value: '601', label: '601 - General de Ley Personas Morales' },
-  { value: '603', label: '603 - Personas Morales con Fines no Lucrativos' },
-  { value: '605', label: '605 - Sueldos y Salarios' },
-  { value: '606', label: '606 - Arrendamiento' },
-  { value: '607', label: '607 - Enajenacion o Adquisicion de Bienes' },
-  { value: '608', label: '608 - Demas ingresos' },
-  { value: '610', label: '610 - Residentes en el Extranjero' },
-  { value: '611', label: '611 - Ingresos por Dividendos' },
-  { value: '612', label: '612 - Actividades Empresariales y Profesionales' },
-  { value: '614', label: '614 - Ingresos por intereses' },
-  { value: '615', label: '615 - Obtencion de premios' },
-  { value: '616', label: '616 - Sin obligaciones fiscales' },
-  { value: '620', label: '620 - Sociedades Cooperativas de Produccion' },
-  { value: '621', label: '621 - Incorporacion Fiscal' },
-  { value: '622', label: '622 - Actividades Agricolas, Ganaderas, etc.' },
-  { value: '623', label: '623 - Opcional para Grupos de Sociedades' },
-  { value: '624', label: '624 - Coordinados' },
-  { value: '625', label: '625 - Plataformas Tecnologicas' },
-  { value: '626', label: '626 - Regimen Simplificado de Confianza (RESICO)' }
-]
+// Catalog loading function
+async function cargarCatalogos() {
+  cargandoCatalogos.value = true
+  try {
+    const [regimenes, tiposId] = await Promise.all([
+      catalogosApi.listarRegimenesFiscales({ pais: paisActual.value, activo: true }),
+      catalogosApi.listarTiposIdentificacion({ pais: paisActual.value, activo: true })
+    ])
+    regimenesFiscalesOptions.value = regimenes
+    tiposIdentificacionOptions.value = tiposId
+  } catch (err) {
+    console.error('Error loading catalogs:', err)
+  } finally {
+    cargandoCatalogos.value = false
+  }
+}
+
+// Watch for country changes to reload catalogs
+watch(paisActual, () => {
+  cargarCatalogos()
+  // Reset fiscal fields when country changes
+  regimenFiscal.value = ''
+  tipoIdentificacion.value = ''
+})
+
+// Load catalogs on mount
+onMounted(() => {
+  cargarCatalogos()
+})
 
 const usoCfdiOptions: { value: string; label: string }[] = [
   { value: 'G01', label: 'G01 - Adquisicion de mercancias' },
@@ -132,10 +157,12 @@ function resetForm() {
     razonSocial.value = props.cliente.razonSocial || ''
     tipoPersona.value = props.cliente.tipoPersona || ''
 
-    // Fiscal
+    // Fiscal/Identification
     rfc.value = props.cliente.rfc || ''
     regimenFiscal.value = props.cliente.regimenFiscal || ''
     usoCfdi.value = props.cliente.usoCfdi || ''
+    tipoIdentificacion.value = props.cliente.tipoIdentificacion || ''
+    numeroIdentificacion.value = props.cliente.numeroIdentificacion || ''
 
     // Contact
     email.value = props.cliente.email || ''
@@ -167,6 +194,8 @@ function resetForm() {
     rfc.value = ''
     regimenFiscal.value = ''
     usoCfdi.value = ''
+    tipoIdentificacion.value = ''
+    numeroIdentificacion.value = ''
 
     email.value = ''
     telefono.value = ''
@@ -199,9 +228,29 @@ function validarForm(): string | null {
   if (email.value && !email.value.includes('@')) {
     return 'El email no es valido'
   }
-  if (rfc.value && rfc.value.length !== 12 && rfc.value.length !== 13) {
-    return 'El RFC debe tener 12 caracteres (persona moral) o 13 caracteres (persona fisica)'
+
+  // Country-specific validation
+  if (esMexico.value) {
+    // Mexico: RFC validation
+    if (rfc.value && rfc.value.length !== 12 && rfc.value.length !== 13) {
+      return 'El RFC debe tener 12 caracteres (persona moral) o 13 caracteres (persona fisica)'
+    }
+  } else if (esEcuador.value) {
+    // Ecuador: Identification validation based on type
+    if (tipoIdentificacion.value && numeroIdentificacion.value) {
+      const tipoSeleccionado = tiposIdentificacionOptions.value.find(t => t.codigo === tipoIdentificacion.value)
+      if (tipoSeleccionado) {
+        const len = numeroIdentificacion.value.length
+        if (tipoSeleccionado.longitudMinima && len < tipoSeleccionado.longitudMinima) {
+          return `El numero de identificacion debe tener al menos ${tipoSeleccionado.longitudMinima} caracteres`
+        }
+        if (tipoSeleccionado.longitudMaxima && len > tipoSeleccionado.longitudMaxima) {
+          return `El numero de identificacion no puede exceder ${tipoSeleccionado.longitudMaxima} caracteres`
+        }
+      }
+    }
   }
+
   if (descuento.value < 0 || descuento.value > 100) {
     return 'El descuento debe estar entre 0 y 100'
   }
@@ -225,11 +274,14 @@ async function guardar() {
       nombre: nombre.value.trim(),
       razonSocial: razonSocial.value.trim() || null,
       tipoPersona: tipoPersona.value || null,
+      pais: paisActual.value,
 
-      // Fiscal
+      // Fiscal/Identification
       rfc: rfc.value.trim().toUpperCase() || null,
       regimenFiscal: regimenFiscal.value || null,
-      usoCfdi: usoCfdi.value || null,
+      usoCfdi: esMexico.value ? (usoCfdi.value || null) : null,
+      tipoIdentificacion: tipoIdentificacion.value || null,
+      numeroIdentificacion: numeroIdentificacion.value.trim().toUpperCase() || null,
 
       // Contact
       email: email.value.trim() || null,
@@ -367,8 +419,27 @@ async function guardar() {
                   </button>
                   <Transition name="accordion">
                     <div v-if="seccionesExpandidas.fiscal" class="p-4 border-t border-gray-200">
-                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
+                      <!-- Loading indicator -->
+                      <div v-if="cargandoCatalogos" class="text-center py-4">
+                        <div class="inline-flex items-center gap-2 text-sm text-gray-500">
+                          <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Cargando catalogos...
+                        </div>
+                      </div>
+
+                      <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Country indicator -->
+                        <div class="sm:col-span-2 mb-2">
+                          <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full" :class="esMexico ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'">
+                            {{ esMexico ? 'Mexico (MX)' : 'Ecuador (EC)' }}
+                          </span>
+                        </div>
+
+                        <!-- Mexico: RFC -->
+                        <div v-if="esMexico">
                           <label for="rfc" class="block text-sm font-medium text-gray-700 mb-1">RFC</label>
                           <input
                             id="rfc"
@@ -380,7 +451,37 @@ async function guardar() {
                           />
                           <p class="mt-1 text-xs text-gray-500">12 caracteres (moral) o 13 (fisica)</p>
                         </div>
-                        <div>
+
+                        <!-- Ecuador: Tipo de Identificacion -->
+                        <div v-if="esEcuador">
+                          <label for="tipoIdentificacion" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Identificacion</label>
+                          <select
+                            id="tipoIdentificacion"
+                            v-model="tipoIdentificacion"
+                            class="w-full h-[38px] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                          >
+                            <option value="">Seleccionar...</option>
+                            <option v-for="tipo in tiposIdentificacionOptions" :key="tipo.codigo" :value="tipo.codigo">
+                              {{ tipo.codigo }} - {{ tipo.descripcion }}
+                            </option>
+                          </select>
+                        </div>
+
+                        <!-- Ecuador: Numero de Identificacion -->
+                        <div v-if="esEcuador">
+                          <label for="numeroIdentificacion" class="block text-sm font-medium text-gray-700 mb-1">Numero de Identificacion</label>
+                          <input
+                            id="numeroIdentificacion"
+                            v-model="numeroIdentificacion"
+                            type="text"
+                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
+                            placeholder="Ej: 1712345678001"
+                          />
+                          <p class="mt-1 text-xs text-gray-500">RUC (13 digitos) o Cedula (10 digitos)</p>
+                        </div>
+
+                        <!-- Regimen Fiscal (both countries) -->
+                        <div :class="esMexico ? '' : 'sm:col-span-2'">
                           <label for="regimenFiscal" class="block text-sm font-medium text-gray-700 mb-1">Regimen Fiscal</label>
                           <select
                             id="regimenFiscal"
@@ -388,12 +489,14 @@ async function guardar() {
                             class="w-full h-[38px] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
                           >
                             <option value="">Seleccionar...</option>
-                            <option v-for="opt in regimenFiscalOptions" :key="opt.value" :value="opt.value">
-                              {{ opt.label }}
+                            <option v-for="regimen in regimenesFiscalesOptions" :key="regimen.codigo" :value="regimen.codigo">
+                              {{ regimen.codigo }} - {{ regimen.descripcion }}
                             </option>
                           </select>
                         </div>
-                        <div class="sm:col-span-2">
+
+                        <!-- Mexico: Uso de CFDI -->
+                        <div v-if="esMexico" class="sm:col-span-2">
                           <label for="usoCfdi" class="block text-sm font-medium text-gray-700 mb-1">Uso de CFDI</label>
                           <select
                             id="usoCfdi"
