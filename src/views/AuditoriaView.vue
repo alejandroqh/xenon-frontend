@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import moment from 'moment'
 // @ts-ignore
 import 'moment/dist/locale/es-mx.js'
+import flatpickr from 'flatpickr'
+import 'flatpickr/dist/flatpickr.min.css'
+import { Spanish } from 'flatpickr/dist/l10n/es.js'
 
 import * as auditoriaApi from '@/api/auditoria'
 import type { AuditoriaEntrada, AccionAuditoria, ListarAuditoriaParams } from '@/types'
@@ -49,6 +52,12 @@ const filtroEntidad = ref<string | undefined>(undefined)
 const filtrosVisibles = ref(false)
 const filtroDesde = ref<string>('')
 const filtroHasta = ref<string>('')
+
+// Flatpickr refs
+const filtroDesdeInput = ref<HTMLInputElement | null>(null)
+const filtroHastaInput = ref<HTMLInputElement | null>(null)
+let flatpickrDesde: flatpickr.Instance | null = null
+let flatpickrHasta: flatpickr.Instance | null = null
 
 // Modal state
 const modalDetallesAbierto = ref(false)
@@ -167,10 +176,10 @@ async function cargarAuditoria() {
       params.entidad = filtroEntidad.value
     }
     if (filtroDesde.value) {
-      params.desde = moment(filtroDesde.value).startOf('day').unix()
+      params.desde = moment(filtroDesde.value).unix()
     }
     if (filtroHasta.value) {
-      params.hasta = moment(filtroHasta.value).endOf('day').unix()
+      params.hasta = moment(filtroHasta.value).unix()
     }
 
     const resultado = await auditoriaApi.listar(params)
@@ -197,6 +206,9 @@ function limpiarFiltros() {
   filtroEntidad.value = undefined
   filtroDesde.value = ''
   filtroHasta.value = ''
+  // Clear flatpickr instances
+  if (flatpickrDesde) flatpickrDesde.clear()
+  if (flatpickrHasta) flatpickrHasta.clear()
   paginaActual.value = 1
   cargarAuditoria()
 }
@@ -370,6 +382,60 @@ function obtenerNombreEntidad(entrada: AuditoriaEntrada): { nombre: string; usua
   }
 }
 
+// Flatpickr config
+const flatpickrConfig: flatpickr.Options.Options = {
+  enableTime: true,
+  time_24hr: true,
+  dateFormat: 'Y-m-d H:i',
+  locale: Spanish,
+  allowInput: true
+}
+
+function initFlatpickr() {
+  if (filtroDesdeInput.value && !flatpickrDesde) {
+    flatpickrDesde = flatpickr(filtroDesdeInput.value, {
+      ...flatpickrConfig,
+      onChange: (dates) => {
+        filtroDesde.value = dates[0] ? moment(dates[0]).format('YYYY-MM-DDTHH:mm') : ''
+      }
+    })
+    // Set initial value if exists
+    if (filtroDesde.value) {
+      flatpickrDesde.setDate(filtroDesde.value)
+    }
+  }
+  if (filtroHastaInput.value && !flatpickrHasta) {
+    flatpickrHasta = flatpickr(filtroHastaInput.value, {
+      ...flatpickrConfig,
+      onChange: (dates) => {
+        filtroHasta.value = dates[0] ? moment(dates[0]).format('YYYY-MM-DDTHH:mm') : ''
+      }
+    })
+    // Set initial value if exists
+    if (filtroHasta.value) {
+      flatpickrHasta.setDate(filtroHasta.value)
+    }
+  }
+}
+
+function destroyFlatpickr() {
+  if (flatpickrDesde) {
+    flatpickrDesde.destroy()
+    flatpickrDesde = null
+  }
+  if (flatpickrHasta) {
+    flatpickrHasta.destroy()
+    flatpickrHasta = null
+  }
+}
+
+// Initialize flatpickr when filters become visible
+watch(filtrosVisibles, (visible) => {
+  if (visible) {
+    nextTick(() => initFlatpickr())
+  }
+})
+
 onMounted(() => {
   cargarAuditoria()
 })
@@ -391,6 +457,7 @@ watch(modalDetallesAbierto, (isOpen) => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleEscKey)
+  destroyFlatpickr()
 })
 </script>
 
@@ -467,7 +534,7 @@ onUnmounted(() => {
               </label>
               <select
                 v-model="filtroAccion"
-                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                class="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 <option :value="undefined">Todas las acciones</option>
                 <option v-for="accion in accionesDisponibles" :key="accion.valor" :value="accion.valor">
@@ -483,7 +550,7 @@ onUnmounted(() => {
               </label>
               <select
                 v-model="filtroEntidad"
-                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                class="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 <option :value="undefined">Todas las entidades</option>
                 <option v-for="entidad in entidadesDisponibles" :key="entidad.valor" :value="entidad.valor">
@@ -498,9 +565,10 @@ onUnmounted(() => {
                 Desde
               </label>
               <input
-                v-model="filtroDesde"
-                type="date"
-                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                ref="filtroDesdeInput"
+                type="text"
+                placeholder="Seleccionar fecha y hora"
+                class="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
 
@@ -510,9 +578,10 @@ onUnmounted(() => {
                 Hasta
               </label>
               <input
-                v-model="filtroHasta"
-                type="date"
-                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                ref="filtroHastaInput"
+                type="text"
+                placeholder="Seleccionar fecha y hora"
+                class="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
           </div>
