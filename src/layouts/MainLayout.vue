@@ -3,6 +3,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useSucursalStore } from '@/stores/sucursal'
 import { useAuthStore, type MenuRuta } from '@/stores/auth'
+import SucursalSelectorModal from '@/components/SucursalSelectorModal.vue'
 import {
   HomeIcon,
   TruckIcon,
@@ -129,7 +130,7 @@ const navigation = computed(() => {
 
 function onSucursalChange(event: Event) {
   const target = event.target as HTMLSelectElement
-  sucursalStore.seleccionarSucursal(target.value)
+  sucursalStore.seleccionarSucursal(target.value, true)
 }
 </script>
 
@@ -243,6 +244,9 @@ function onSucursalChange(event: Event) {
         <RouterView />
       </div>
     </main>
+
+    <!-- Sucursal Selection Modal -->
+    <SucursalSelectorModal />
   </div>
 </template>
 
