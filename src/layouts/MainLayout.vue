@@ -148,6 +148,26 @@ function onSucursalChange(event: Event) {
     })
   }
 }
+
+// User level labels in Spanish
+const nivelLabels: Record<string, string> = {
+  admin: 'Administrador',
+  gerente: 'Gerente',
+  vendedor: 'Vendedor',
+  operador: 'Operador',
+  visor: 'Visor'
+}
+
+// Get user initials for avatar fallback
+const userInitials = computed(() => {
+  if (!authStore.usuario?.nombreCompleto) return '?'
+  return authStore.usuario.nombreCompleto
+    .split(' ')
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+})
 </script>
 
 <template>
@@ -208,15 +228,62 @@ function onSucursalChange(event: Event) {
         </nav>
 
         <!-- Footer -->
-        <div class="p-4 border-t border-gray-200 space-y-3">
-          <button
-            @click="cerrarSesion"
-            class="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
-          >
-            <ArrowRightStartOnRectangleIcon class="w-5 h-5" />
-            Cerrar sesion
-          </button>
-          <span class="block text-xs text-gray-500">Plataforma de Operaciones Comerciales</span>
+        <div class="border-t border-gray-200">
+          <!-- User Info -->
+          <div v-if="authStore.usuario" class="p-4 border-b border-gray-100">
+            <div class="flex items-center gap-3">
+              <!-- Avatar -->
+              <div class="shrink-0">
+                <img
+                  v-if="authStore.usuario.imagen"
+                  :src="authStore.usuario.imagen"
+                  :alt="authStore.usuario.nombreCompleto"
+                  class="w-10 h-10 rounded-full object-cover"
+                />
+                <div
+                  v-else
+                  class="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-sm font-semibold"
+                >
+                  {{ userInitials }}
+                </div>
+              </div>
+              <!-- User Details -->
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-gray-900 truncate">
+                  {{ authStore.usuario.nombreCompleto }}
+                </p>
+                <p class="text-xs text-gray-500 truncate">
+                  @{{ authStore.usuario.nombreUsuario }}
+                </p>
+              </div>
+            </div>
+            <!-- User Level Badge -->
+            <div class="mt-2">
+              <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                :class="{
+                  'bg-purple-100 text-purple-800': authStore.usuario.nivel === 'admin',
+                  'bg-blue-100 text-blue-800': authStore.usuario.nivel === 'gerente',
+                  'bg-green-100 text-green-800': authStore.usuario.nivel === 'vendedor',
+                  'bg-yellow-100 text-yellow-800': authStore.usuario.nivel === 'operador',
+                  'bg-gray-100 text-gray-800': authStore.usuario.nivel === 'visor'
+                }"
+              >
+                {{ nivelLabels[authStore.usuario.nivel] || authStore.usuario.nivel }}
+              </span>
+            </div>
+          </div>
+          <!-- Logout & Info -->
+          <div class="p-4 space-y-3">
+            <button
+              @click="cerrarSesion"
+              class="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            >
+              <ArrowRightStartOnRectangleIcon class="w-5 h-5" />
+              Cerrar sesion
+            </button>
+            <span class="block text-xs text-gray-500">Plataforma de Operaciones Comerciales</span>
+          </div>
         </div>
       </aside>
     </Transition>
