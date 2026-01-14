@@ -537,9 +537,6 @@ onMounted(() => {
                     Ubicacion
                   </th>
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Facturacion
-                  </th>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
                   </th>
                   <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -572,23 +569,6 @@ onMounted(() => {
                       </p>
                       <p v-else class="text-sm text-gray-400">-</p>
                       <p v-if="sucursal.telefono" class="text-xs text-gray-400 mt-0.5">{{ sucursal.telefono }}</p>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4">
-                    <div class="flex items-start gap-2">
-                      <template v-if="sucursal.facturaReady">
-                        <DocumentCheckIcon class="h-4 w-4 text-green-500 mt-0.5" />
-                        <span class="text-xs text-green-700">Lista</span>
-                      </template>
-                      <template v-else>
-                        <ExclamationTriangleIcon class="h-4 w-4 text-amber-500 mt-0.5" />
-                        <div>
-                          <span class="text-xs text-amber-700">Incompleta</span>
-                          <p v-if="sucursal.facturaReadyMissing" class="text-[10px] text-gray-500 mt-0.5 max-w-[120px]">
-                            {{ formatearCamposFaltantes(sucursal.facturaReadyMissing) }}
-                          </p>
-                        </div>
-                      </template>
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
@@ -636,7 +616,7 @@ onMounted(() => {
                   </td>
                 </tr>
                 <tr v-if="sucursalesFiltradas.length === 0">
-                  <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                  <td colspan="4" class="px-6 py-12 text-center text-gray-500">
                     No se encontraron sucursales
                   </td>
                 </tr>

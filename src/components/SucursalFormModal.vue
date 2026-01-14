@@ -139,12 +139,12 @@ function resetForm() {
     email.value = props.sucursal.email || ''
     telefono.value = props.sucursal.telefono || ''
 
-    // Expand sections that have data
+    // Collapse all sections when editing
     seccionesExpandidas.value = {
-      direccion: !!(calle.value || ciudad.value || codigoPostal.value),
-      legal: !!(razonSocial.value || representanteLegal.value),
-      fiscal: !!(rfc.value || regimenFiscal.value || ruc.value),
-      contacto: !!(email.value || telefono.value)
+      direccion: false,
+      legal: false,
+      fiscal: false,
+      contacto: false
     }
   } else {
     // Create mode: reset to defaults

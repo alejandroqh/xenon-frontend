@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
+import Swal from 'sweetalert2'
 import { useSucursalStore } from '@/stores/sucursal'
 import { useAuthStore, type MenuRuta } from '@/stores/auth'
 import SucursalSelectorModal from '@/components/SucursalSelectorModal.vue'
@@ -130,7 +131,22 @@ const navigation = computed(() => {
 
 function onSucursalChange(event: Event) {
   const target = event.target as HTMLSelectElement
-  sucursalStore.seleccionarSucursal(target.value, true)
+  const sucursalId = target.value
+  const sucursal = sucursalStore.sucursalesAccesibles.find(s => s.id === sucursalId)
+
+  sucursalStore.seleccionarSucursal(sucursalId, true)
+
+  if (sucursal) {
+    Swal.fire({
+      title: sucursal.nombre,
+      text: 'Sucursal activa',
+      icon: 'success',
+      position: 'center',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    })
+  }
 }
 </script>
 
