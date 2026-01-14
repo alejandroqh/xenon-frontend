@@ -11,6 +11,19 @@ const mostrar = computed(() => sucursalStore.requiereSeleccion)
 function seleccionar(sucursal: Sucursal) {
   sucursalStore.seleccionarSucursal(sucursal.id, true)
 }
+
+// Format address from structured fields
+function formatearDireccion(sucursal: Sucursal): string {
+  const parts: string[] = []
+
+  if (sucursal.ciudad) {
+    let ubicacion = sucursal.ciudad
+    if (sucursal.estado) ubicacion += `, ${sucursal.estado}`
+    parts.push(ubicacion)
+  }
+
+  return parts.length > 0 ? parts.join(', ') : ''
+}
 </script>
 
 <template>
@@ -55,11 +68,11 @@ function seleccionar(sucursal: Sucursal) {
                         {{ sucursal.nombre }}
                       </p>
                       <p
-                        v-if="sucursal.direccion"
+                        v-if="formatearDireccion(sucursal)"
                         class="mt-1 text-xs text-gray-500 flex items-center gap-1"
                       >
                         <MapPinIcon class="w-3 h-3 flex-shrink-0" />
-                        <span class="truncate">{{ sucursal.direccion }}</span>
+                        <span class="truncate">{{ formatearDireccion(sucursal) }}</span>
                       </p>
                     </div>
                   </div>
