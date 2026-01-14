@@ -4,3 +4,4 @@
 
 export * from './usuarios'
 export * from './sucursales'
+export * from './auditoria'
