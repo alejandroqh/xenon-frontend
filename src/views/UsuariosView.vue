@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import moment from 'moment'
 // @ts-ignore
 import 'moment/dist/locale/es-mx.js'
@@ -18,7 +18,9 @@ import {
   PlusIcon,
   ChevronDownIcon,
   NoSymbolIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  ClipboardDocumentIcon,
+  ClipboardDocumentCheckIcon
 } from '@heroicons/vue/24/outline'
 import UsuarioFormModal from '@/components/UsuarioFormModal.vue'
 
@@ -75,6 +77,22 @@ function contarPermisos(menus: Record<string, string[]>): { total: number; edita
   return { total, editar, ver }
 }
 
+// ID copy functionality
+const idCopiado = ref(false)
+
+function truncarId(id: string): string {
+  if (id.length <= 13) return id
+  return `${id.slice(0, 8)}...${id.slice(-4)}`
+}
+
+async function copiarId(id: string) {
+  await navigator.clipboard.writeText(id)
+  idCopiado.value = true
+  setTimeout(() => {
+    idCopiado.value = false
+  }, 2000)
+}
+
 /**
  * Fuzzy search: checks if all characters in the query appear in the text in order
  */
@@ -98,10 +116,15 @@ function fuzzyMatch(text: string, query: string): boolean {
 function usuarioMatchesBusqueda(usuario: UsuarioResponse, query: string): boolean {
   if (!query.trim()) return true
 
+  const matchesSucursal = usuario.permisosPorSucursal.some((permiso) =>
+    fuzzyMatch(permiso.sucursalNombre, query)
+  )
+
   return (
     fuzzyMatch(usuario.nombreCompleto, query) ||
     fuzzyMatch(usuario.nombreUsuario, query) ||
-    fuzzyMatch(usuario.email, query)
+    fuzzyMatch(usuario.email, query) ||
+    matchesSucursal
   )
 }
 
@@ -157,6 +180,13 @@ function cerrarModalDetalles() {
   modalDetallesAbierto.value = false
   usuarioSeleccionado.value = null
   permisosExpandidos.value = {}
+}
+
+function editarDesdeDetalles() {
+  if (!usuarioSeleccionado.value) return
+  const usuario = usuarioSeleccionado.value
+  cerrarModalDetalles()
+  abrirModalEditar(usuario)
 }
 
 function abrirModalCambiarEstado(usuario: UsuarioResponse) {
@@ -235,6 +265,25 @@ const usuariosFiltrados = computed(() =>
 onMounted(() => {
   cargarUsuarios()
 })
+
+// ESC key handler for modal
+function handleEscKey(e: KeyboardEvent) {
+  if (e.key === 'Escape' && modalDetallesAbierto.value) {
+    cerrarModalDetalles()
+  }
+}
+
+watch(modalDetallesAbierto, (isOpen) => {
+  if (isOpen) {
+    document.addEventListener('keydown', handleEscKey)
+  } else {
+    document.removeEventListener('keydown', handleEscKey)
+  }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleEscKey)
+})
 </script>
 
 <template>
@@ -255,7 +304,7 @@ onMounted(() => {
         <input
           v-model="busqueda"
           type="text"
-          placeholder="Buscar por nombre, usuario o email..."
+          placeholder="Buscar por nombre, usuario, email o sucursal..."
           class="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
         />
         <button
@@ -733,7 +782,22 @@ onMounted(() => {
                     </div>
                     <div class="bg-gray-50 rounded-lg p-4">
                       <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">ID</p>
-                      <p class="text-sm font-medium text-gray-900 font-mono">{{ usuarioSeleccionado.id }}</p>
+                      <div class="flex items-center gap-2">
+                        <p
+                          class="text-sm font-medium text-gray-900 font-mono"
+                          :title="usuarioSeleccionado.id"
+                        >
+                          {{ truncarId(usuarioSeleccionado.id) }}
+                        </p>
+                        <button
+                          @click="copiarId(usuarioSeleccionado.id)"
+                          class="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors cursor-pointer"
+                          :title="idCopiado ? 'Copiado!' : 'Copiar ID'"
+                        >
+                          <ClipboardDocumentCheckIcon v-if="idCopiado" class="w-4 h-4 text-green-600" />
+                          <ClipboardDocumentIcon v-else class="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -833,7 +897,7 @@ onMounted(() => {
                 </button>
                 <button
                   v-if="usuarioSeleccionado"
-                  @click="cerrarModalDetalles(); abrirModalEditar(usuarioSeleccionado)"
+                  @click="editarDesdeDetalles"
                   class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
                 >
                   <PencilSquareIcon class="w-4 h-4" />
