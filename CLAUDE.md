@@ -1,220 +1,107 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Project Overview
-
-Xenon Frontend is a Vue 3 + TypeScript SPA for a commercial operations platform with multi-branch (sucursal) support. It uses Vite as the build tool and Tailwind CSS v4 for styling.
+Vue 3 + TypeScript SPA for commercial operations with multi-branch (sucursal) support. Vite build, Tailwind CSS v4.
 
 ## Commands
 
 ```bash
-npm run dev      # Start development server
-npm run build    # TypeScript check (vue-tsc) + production build
-npm run preview  # Preview production build locally
+npm run dev      # Dev server
+npm run build    # Type check + production build
+npm run preview  # Preview production
 ```
 
-Note: Uses Bun as package manager (bun.lock present). No test or lint commands configured yet.
+Package manager: Bun. No tests/lint configured.
 
 ## Architecture
 
-### Tech Stack
-- Vue 3.5 with Composition API (`<script setup>` syntax)
-- TypeScript 5.9 with strict mode
-- Pinia for state management
-- Vue Router 4 with lazy-loaded routes
-- Axios for HTTP requests
-- Tailwind CSS v4 (via Vite plugin)
+**Stack:** Vue 3.5 (Composition API, `<script setup>`), TypeScript 5.9 strict, Pinia, Vue Router 4 (lazy-loaded), Axios, Tailwind v4
 
-### UI Libraries (Use First Before Implementing)
+**Path alias:** `@/` → `src/`
 
-**Always prefer these existing libraries over custom implementations:**
+### UI Libraries (prefer over custom implementations)
 
-| Library | Version | Use For | Example Usage |
-|---------|---------|---------|---------------|
-| **SweetAlert2** | 11.x | Toasts, alerts, confirmations, modals | `Swal.fire()`, `Toast.fire()` |
-| **Moment.js** | 2.x | Date formatting, parsing, manipulation | `moment(date).format('LL')` |
-| **Heroicons** | 2.x | Icons (solid/outline variants) | `import { IconName } from '@heroicons/vue/24/outline'` |
+- **SweetAlert2** - toasts, alerts, confirmations (see `UsuariosView.vue` for Toast pattern)
+- **Moment.js** - dates with Spanish locale (`es-mx`)
+- **Heroicons** - icons (`@heroicons/vue/24/outline` or `/solid`)
 
-**SweetAlert2 Toast Pattern** (from `UsuariosView.vue`):
-```typescript
-import Swal from 'sweetalert2'
+### Key Patterns
 
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'center',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-  didOpen: (toast) => {
-    toast.onmouseenter = Swal.stopTimer
-    toast.onmouseleave = Swal.resumeTimer
-  }
-})
-
-// Usage
-Toast.fire({ icon: 'success', title: 'Mensaje guardado' })
-```
-
-**Moment.js with Spanish locale**:
-```typescript
-import moment from 'moment'
-import 'moment/dist/locale/es-mx.js'
-
-moment(fecha).format('LL')  // "13 de enero de 2026"
-```
-
-### Path Alias
-`@/` maps to `src/` (configured in vite.config.ts and tsconfig)
-
-### Key Architectural Patterns
-
-**Multi-Branch Context:** All API requests include `X-Sucursal-Id` header automatically via Axios interceptor (`src/api/client.ts`). The current branch is managed by `useSucursalStore`.
-
-**State Management:** Pinia stores use Composition API style with `defineStore()`. See `src/stores/sucursal.ts` for the pattern.
-
-**API Client:** Centralized Axios instance in `src/api/client.ts` with request interceptor for branch header injection. Import and use this client for all API calls.
-
-**Layout Structure:** `MainLayout.vue` provides fixed sidebar navigation + sticky header. Views render inside nested `<RouterView>`.
-
-**Route Configuration:** Routes defined in `src/router/index.ts` with `meta.title` for page titles. All view components are lazy-loaded.
+- **Multi-Branch:** `X-Sucursal-Id` header auto-injected via Axios interceptor (`src/api/client.ts`), managed by `useSucursalStore`
+- **State:** Pinia with Composition API style (`src/stores/`)
+- **Layout:** `MainLayout.vue` (fixed sidebar + sticky header) with nested `<RouterView>`
+- **Routes:** `src/router/index.ts` with `meta.title`, lazy-loaded views
 
 ### Directory Structure
+
 ```
 src/
-├── api/          # HTTP client configuration
-├── router/       # Vue Router setup
-├── stores/       # Pinia stores
-├── layouts/      # Layout components (MainLayout)
-├── views/        # Page-level components
-├── components/   # Reusable UI components
-└── assets/       # Static assets
+├── api/        # Axios client
+├── router/     # Routes
+├── stores/     # Pinia stores
+├── layouts/    # MainLayout
+├── views/      # Page components (*View.vue)
+├── components/ # Reusable components
+└── assets/     # Static files
 ```
-
-### Environment Variables
-- `VITE_APP_NAME` - Application name (displayed in header)
-- `VITE_API_URL` - Backend API base URL
 
 ### Naming Conventions
-- Domain entities use Spanish naming (Sucursal, Envíos)
-- Store hooks prefixed with `use` (e.g., `useSucursalStore`)
-- Views suffixed with `View` (e.g., `DashboardView.vue`)
-- Layouts suffixed with `Layout` (e.g., `MainLayout.vue`)
 
-## Authentication & Permissions
+- Spanish domain names (Sucursal, Envíos)
+- Stores: `use*Store`
+- Views: `*View.vue`
+- Layouts: `*Layout.vue`
 
-### Auth Store (`src/stores/auth.ts`)
+### Environment
 
-Mock login with `admin/admin` credentials. Will be replaced with API calls when backend is enabled.
+- `VITE_APP_NAME` - App name
+- `VITE_API_URL` - API base URL
 
-### User Model
+## Auth & Permissions
 
-```typescript
-interface Usuario {
-  id: string
-  nombreCompleto: string
-  nombreUsuario: string
-  email: string
-  nivel: NivelUsuario        // 'admin' | 'gerente' | 'vendedor' | 'operador' | 'visor'
-  imagen: string | null
-  permisosPorSucursal: PermisosSucursal[]
-}
-```
+**Auth store:** `src/stores/auth.ts` (mock: `admin/admin`)
 
-### Permission System
+**User levels:** `admin | gerente | vendedor | operador | visor`
 
-Granular permissions per sucursal per menu item:
+**Permission system:** Per-sucursal, per-menu granular permissions
 
 ```typescript
 type PermisoAccion = 'view' | 'edit'
-
-type MenuRuta =
-  | 'panel' | 'importaciones' | 'productos' | 'inventario'
-  | 'clientes' | 'rutas' | 'promociones'
-  | 'reportes' | 'estadisticas'
-  | 'auditoria' | 'usuarios' | 'configuracion'
-
-interface PermisosSucursal {
-  sucursalId: string
-  menus: Partial<Record<MenuRuta, PermisoAccion[]>>
-}
+type MenuRuta = 'panel' | 'importaciones' | 'productos' | 'inventario' | 'clientes' | 'rutas' | 'promociones' | 'reportes' | 'estadisticas' | 'auditoria' | 'usuarios' | 'configuracion'
 ```
 
-- **No entry for a menu** = disabled/no access
-- **`['view']`** = read-only access
-- **`['view', 'edit']`** = full access
+- No menu entry = no access
+- `['view']` = read-only
+- `['view', 'edit']` = full access
 
-### Permission Helper Functions
+**Helper methods:** `tieneAccesoSucursal()`, `puedeVer()`, `puedeEditar()`, `menuDeshabilitado()`
 
-```typescript
-authStore.tieneAccesoSucursal(sucursalId)      // can access branch?
-authStore.puedeVer(sucursalId, menu)           // can view menu?
-authStore.puedeEditar(sucursalId, menu)        // can edit in menu?
-authStore.menuDeshabilitado(sucursalId, menu)  // is menu disabled?
-```
+## API Reference
 
-### Sucursal Access
+**Base:** `http://localhost:3000` | **Docs:** `/docs`
 
-`useSucursalStore` filters `sucursalesAccesibles` based on user permissions. Users only see branches they have access to in the selector.
+### Endpoints
 
-### Navigation Filtering
+**Auth:** `POST /api/auth/login`, `/refresh`, `/logout` | `GET /api/auth/me`
 
-`MainLayout.vue` filters sidebar navigation based on `puedeVer()` for the current sucursal. Menu items without view permission are hidden.
+**Sucursales:** `GET|POST /api/sucursales/` | `GET|PATCH|DELETE /api/sucursales/{id}`
 
-## Backend API Reference
+**Usuarios:** `GET|POST /api/usuarios/` | `GET|PATCH /api/usuarios/{id}`
 
-**Base URL:** `http://localhost:3000` (configurable via `VITE_API_URL`)
-**Documentation:** `http://localhost:3000/docs`
+**Health:** `GET /health`
 
-### Auth Endpoints
+### User Schema (create/update)
 
-| Method | Endpoint | Body | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/login` | `{ username, password }` | Login |
-| POST | `/api/auth/refresh` | `{ refreshToken }` | Refresh access token |
-| POST | `/api/auth/logout` | `{ refreshToken? }` | Logout |
-| GET | `/api/auth/me` | - | Get current user |
-
-### Sucursales (Branches)
-
-| Method | Endpoint | Body/Params | Description |
-|--------|----------|-------------|-------------|
-| GET | `/api/sucursales/` | `?activo` (optional) | List branches |
-| POST | `/api/sucursales/` | `{ id, nombre, direccion?, telefono?, activo? }` | Create branch |
-| GET | `/api/sucursales/{id}` | - | Get branch |
-| PATCH | `/api/sucursales/{id}` | `{ nombre?, direccion?, telefono?, activo? }` | Update branch |
-| DELETE | `/api/sucursales/{id}` | - | Delete branch |
-
-### Usuarios (Users)
-
-| Method | Endpoint | Body/Params | Description |
-|--------|----------|-------------|-------------|
-| GET | `/api/usuarios/` | `?activo` (optional) | List users |
-| POST | `/api/usuarios/` | See schema below | Create user |
-| GET | `/api/usuarios/{id}` | - | Get user |
-| PATCH | `/api/usuarios/{id}` | See schema below | Update user |
-
-**User Schema:**
 ```typescript
 {
-  nombreCompleto: string      // required on create
-  nombreUsuario: string       // required on create
-  email: string               // email format, required on create
-  contrasena: string          // min 6 chars, required on create
-  nivel: 'admin' | 'gerente' | 'vendedor' | 'operador' | 'visor'
+  nombreCompleto: string
+  nombreUsuario: string
+  email: string
+  contrasena: string          // min 6, create only
+  nivel: NivelUsuario
   imagen?: string | null
   telefono?: string | null
   accesoApp?: boolean
   activo?: boolean            // update only
-  permisosPorSucursal: Array<{
-    sucursalId: string
-    menus: Record<MenuRuta, ('view' | 'edit')[]>
-  }>
+  permisosPorSucursal: { sucursalId: string, menus: Record<MenuRuta, PermisoAccion[]> }[]
 }
 ```
-
-### Health Check
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Server health status |
