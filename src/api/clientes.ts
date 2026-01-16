@@ -101,3 +101,67 @@ export async function actualizarDireccion(
 export async function eliminarDireccion(clienteId: string, direccionId: string): Promise<void> {
   await apiClient.delete(`/clientes/${clienteId}/direcciones/${direccionId}`)
 }
+
+// =============================================================================
+// Bulk Upload API Functions
+// =============================================================================
+
+/**
+ * Download Mexico CSV template
+ */
+export function descargarTemplateMX(): void {
+  const url = `${apiClient.defaults.baseURL}/clientes/template/mx`
+  window.open(url, '_blank')
+}
+
+/**
+ * Download Ecuador CSV template
+ */
+export function descargarTemplateEC(): void {
+  const url = `${apiClient.defaults.baseURL}/clientes/template/ec`
+  window.open(url, '_blank')
+}
+
+/**
+ * Bulk upload result for a single row
+ */
+export interface BulkUploadImported {
+  row: number
+  clienteId: string
+  nombre: string
+}
+
+export interface BulkUploadError {
+  row: number
+  data: Record<string, unknown>
+  errors: string[]
+}
+
+export interface BulkUploadSummary {
+  total: number
+  imported: number
+  skipped: number
+  failed: number
+}
+
+export interface BulkUploadResponse {
+  success: boolean
+  summary: BulkUploadSummary
+  imported: BulkUploadImported[]
+  errors: BulkUploadError[]
+}
+
+/**
+ * Bulk upload clients from CSV file
+ */
+export async function cargaMasiva(file: File): Promise<BulkUploadResponse> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await apiClient.post<BulkUploadResponse>('/clientes/bulk-upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+  return response.data
+}

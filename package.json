@@ -14,6 +14,7 @@
     "axios": "^1.13.2",
     "flatpickr": "^4.6.13",
     "moment": "^2.30.1",
+    "papaparse": "^5.5.3",
     "pinia": "^3.0.4",
     "sweetalert2": "^11.26.17",
     "tailwindcss": "^4.1.18",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.8",
+    "@types/papaparse": "^5.5.2",
     "@vitejs/plugin-vue": "^6.0.3",
     "@vue/tsconfig": "^0.8.1",
     "typescript": "~5.9.3",

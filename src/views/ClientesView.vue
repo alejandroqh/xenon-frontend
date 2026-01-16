@@ -9,7 +9,9 @@ import * as clientesApi from '@/api/clientes'
 import { obtenerMensajeError } from '@/api/errorUtils'
 import type { Cliente } from '@/types'
 import { useSucursalStore } from '@/stores/sucursal'
+import { useAuthStore } from '@/stores/auth'
 import ClienteFormModal from '@/components/ClienteFormModal.vue'
+import ClienteBulkUploadModal from '@/components/ClienteBulkUploadModal.vue'
 import {
   UserGroupIcon,
   BuildingOfficeIcon
@@ -27,10 +29,15 @@ import {
   ClipboardDocumentCheckIcon,
   EnvelopeIcon,
   PhoneIcon,
-  MapPinIcon
+  MapPinIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/vue/24/outline'
 
 const sucursalStore = useSucursalStore()
+const authStore = useAuthStore()
+
+// Check if user is admin
+const esAdmin = computed(() => authStore.usuario?.nivel === 'admin')
 
 const clientes = ref<Cliente[]>([])
 const cargando = ref(true)
@@ -56,6 +63,9 @@ const eliminando = ref(false)
 // Create/Edit modal state
 const modalFormAbierto = ref(false)
 const clienteParaEditar = ref<Cliente | null>(null)
+
+// Bulk upload modal state
+const modalCargaMasivaAbierto = ref(false)
 
 // SweetAlert2 toast configuration
 const Toast = Swal.mixin({
@@ -265,6 +275,20 @@ function cerrarModalForm() {
   clienteParaEditar.value = null
 }
 
+function abrirModalCargaMasiva() {
+  modalCargaMasivaAbierto.value = true
+}
+
+function cerrarModalCargaMasiva() {
+  modalCargaMasivaAbierto.value = false
+}
+
+function manejarCargaMasivaCompletada() {
+  // Reload clients after bulk upload
+  cargarClientes()
+  mostrarToast('Importacion completada')
+}
+
 function manejarClienteGuardado(cliente: Cliente) {
   if (clienteParaEditar.value) {
     // Update existing client in list
@@ -310,11 +334,12 @@ function handleEscKey(e: KeyboardEvent) {
     if (modalEstadoAbierto.value) cerrarModalEstado()
     if (modalEliminarAbierto.value) cerrarModalEliminar()
     if (modalFormAbierto.value) cerrarModalForm()
+    if (modalCargaMasivaAbierto.value) cerrarModalCargaMasiva()
   }
 }
 
-watch([modalDetallesAbierto, modalEstadoAbierto, modalEliminarAbierto, modalFormAbierto], ([detalles, estado, eliminar, form]) => {
-  if (detalles || estado || eliminar || form) {
+watch([modalDetallesAbierto, modalEstadoAbierto, modalEliminarAbierto, modalFormAbierto, modalCargaMasivaAbierto], ([detalles, estado, eliminar, form, cargaMasiva]) => {
+  if (detalles || estado || eliminar || form || cargaMasiva) {
     document.addEventListener('keydown', handleEscKey)
   } else {
     document.removeEventListener('keydown', handleEscKey)
@@ -396,6 +421,14 @@ onUnmounted(() => {
 
       <!-- Actions -->
       <div class="flex items-center gap-2 sm:ml-auto">
+        <button
+          v-if="esAdmin"
+          @click="abrirModalCargaMasiva"
+          class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors cursor-pointer"
+        >
+          <ArrowUpTrayIcon class="h-5 w-5" />
+          <span class="hidden sm:inline">Importar Clientes</span>
+        </button>
         <button
           @click="abrirModalCrear"
           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors cursor-pointer"
@@ -1073,6 +1106,13 @@ onUnmounted(() => {
       :cliente="clienteParaEditar"
       @cerrar="cerrarModalForm"
       @guardado="manejarClienteGuardado"
+    />
+
+    <!-- Modal Carga Masiva -->
+    <ClienteBulkUploadModal
+      :abierto="modalCargaMasivaAbierto"
+      @cerrar="cerrarModalCargaMasiva"
+      @carga-completada="manejarCargaMasivaCompletada"
     />
   </div>
 </template>
