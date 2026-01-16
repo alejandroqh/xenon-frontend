@@ -15,6 +15,8 @@ import {
   EyeIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   FunnelIcon,
   ClipboardDocumentIcon,
   ClipboardDocumentCheckIcon,
@@ -66,6 +68,9 @@ const cargandoDetalles = ref(false)
 
 // ID copy functionality
 const idCopiado = ref(false)
+
+// Expandable changes state
+const cambiosExpandidos = ref<Set<string>>(new Set())
 
 // Action types for filter (matching API spec)
 const accionesDisponibles: { valor: AccionAuditoria; etiqueta: string }[] = [
@@ -238,6 +243,7 @@ async function verDetalles(id: string) {
 function cerrarModalDetalles() {
   modalDetallesAbierto.value = false
   entradaSeleccionada.value = null
+  cambiosExpandidos.value.clear()
 }
 
 function formatearFecha(timestamp: number): string {
@@ -362,6 +368,32 @@ function computarDiferencias(valorAnterior: Record<string, unknown> | null, valo
 function obtenerCambiosPrincipales(entrada: AuditoriaEntrada): Array<{ campo: string; antes: string; despues: string }> {
   const diferencias = computarDiferencias(entrada.valorAnterior, entrada.valorNuevo)
   return diferencias.slice(0, 3)
+}
+
+// Check if a value is considered "large" (more than 80 chars or has multiple lines)
+function esValorLargo(valor: string): boolean {
+  if (!valor || valor === '-') return false
+  return valor.length > 80 || valor.split('\n').length > 3
+}
+
+// Get a truncated preview of a long value
+function obtenerPreview(valor: string, maxLength: number = 60): string {
+  if (!valor || valor === '-') return valor
+  if (valor.length <= maxLength) return valor
+  return valor.substring(0, maxLength) + '...'
+}
+
+// Toggle expanded state for a change in the modal
+function toggleCambioExpandido(cambioId: string) {
+  if (cambiosExpandidos.value.has(cambioId)) {
+    cambiosExpandidos.value.delete(cambioId)
+  } else {
+    cambiosExpandidos.value.add(cambioId)
+  }
+}
+
+function esCambioExpandido(cambioId: string): boolean {
+  return cambiosExpandidos.value.has(cambioId)
 }
 
 function contarCambios(entrada: AuditoriaEntrada): number {
@@ -724,9 +756,9 @@ onUnmounted(() => {
                 class="flex items-center gap-2 text-xs"
               >
                 <span class="text-gray-600 font-medium">{{ cambio.campo }}:</span>
-                <span class="text-red-600 line-through truncate max-w-[80px]">{{ cambio.antes }}</span>
+                <span class="text-red-600 line-through truncate max-w-[80px]" :title="cambio.antes">{{ esValorLargo(cambio.antes) ? obtenerPreview(cambio.antes, 30) : cambio.antes }}</span>
                 <span class="text-gray-400">→</span>
-                <span class="text-green-600 truncate max-w-[80px]">{{ cambio.despues }}</span>
+                <span class="text-green-600 truncate max-w-[80px]" :title="cambio.despues">{{ esValorLargo(cambio.despues) ? obtenerPreview(cambio.despues, 30) : cambio.despues }}</span>
               </div>
               <span
                 v-if="contarCambios(entrada) > 3"
@@ -838,9 +870,9 @@ onUnmounted(() => {
                     class="flex items-center gap-2 text-xs flex-wrap"
                   >
                     <span class="text-gray-500 font-medium">{{ cambio.campo }}:</span>
-                    <span class="text-red-600 line-through" :title="cambio.antes">{{ cambio.antes }}</span>
+                    <span class="text-red-600 line-through max-w-[150px] truncate inline-block align-bottom" :title="cambio.antes">{{ esValorLargo(cambio.antes) ? obtenerPreview(cambio.antes, 40) : cambio.antes }}</span>
                     <span class="text-gray-400">→</span>
-                    <span class="text-green-600" :title="cambio.despues">{{ cambio.despues }}</span>
+                    <span class="text-green-600 max-w-[150px] truncate inline-block align-bottom" :title="cambio.despues">{{ esValorLargo(cambio.despues) ? obtenerPreview(cambio.despues, 40) : cambio.despues }}</span>
                   </div>
                   <span
                     v-if="contarCambios(entrada) > 3"
@@ -1048,18 +1080,44 @@ onUnmounted(() => {
                         :key="cambio.campo"
                         class="px-4 py-3 bg-white"
                       >
-                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">{{ cambio.campo }}</p>
+                        <div class="flex items-center justify-between mb-2">
+                          <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ cambio.campo }}</p>
+                          <button
+                            v-if="esValorLargo(cambio.antes) || esValorLargo(cambio.despues)"
+                            @click="toggleCambioExpandido(entradaSeleccionada.id + '-' + cambio.campo)"
+                            class="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 cursor-pointer"
+                          >
+                            <template v-if="esCambioExpandido(entradaSeleccionada.id + '-' + cambio.campo)">
+                              <ChevronUpIcon class="w-3.5 h-3.5" />
+                              <span>Colapsar</span>
+                            </template>
+                            <template v-else>
+                              <ChevronDownIcon class="w-3.5 h-3.5" />
+                              <span>Expandir</span>
+                            </template>
+                          </button>
+                        </div>
                         <div class="grid grid-cols-2 gap-4">
                           <div class="bg-red-50 rounded p-2">
                             <p class="text-[10px] text-red-500 uppercase tracking-wide mb-1">Antes</p>
-                            <p class="text-xs text-red-700 font-mono break-all">
-                              {{ cambio.antes }}
+                            <p
+                              :class="[
+                                'text-xs text-red-700 font-mono break-all',
+                                !esCambioExpandido(entradaSeleccionada.id + '-' + cambio.campo) && esValorLargo(cambio.antes) ? 'line-clamp-3' : ''
+                              ]"
+                            >
+                              {{ esCambioExpandido(entradaSeleccionada.id + '-' + cambio.campo) || !esValorLargo(cambio.antes) ? cambio.antes : obtenerPreview(cambio.antes) }}
                             </p>
                           </div>
                           <div class="bg-green-50 rounded p-2">
                             <p class="text-[10px] text-green-500 uppercase tracking-wide mb-1">Despues</p>
-                            <p class="text-xs text-green-700 font-mono break-all">
-                              {{ cambio.despues }}
+                            <p
+                              :class="[
+                                'text-xs text-green-700 font-mono break-all',
+                                !esCambioExpandido(entradaSeleccionada.id + '-' + cambio.campo) && esValorLargo(cambio.despues) ? 'line-clamp-3' : ''
+                              ]"
+                            >
+                              {{ esCambioExpandido(entradaSeleccionada.id + '-' + cambio.campo) || !esValorLargo(cambio.despues) ? cambio.despues : obtenerPreview(cambio.despues) }}
                             </p>
                           </div>
                         </div>
@@ -1166,6 +1224,13 @@ onUnmounted(() => {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
