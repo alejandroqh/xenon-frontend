@@ -8,6 +8,7 @@ import 'flatpickr/dist/flatpickr.min.css'
 import { Spanish } from 'flatpickr/dist/l10n/es.js'
 
 import * as auditoriaApi from '@/api/auditoria'
+import { obtenerMensajeError } from '@/api/errorUtils'
 import type { AuditoriaEntrada, AccionAuditoria, ListarAuditoriaParams } from '@/types'
 import {
   MagnifyingGlassIcon,
@@ -193,7 +194,7 @@ async function cargarAuditoria() {
     // Calculate total pages from total and limit
     totalPaginas.value = Math.ceil(resultado.pagination.total / limitePorPagina.value) || 1
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Error al cargar auditoria'
+    error.value = obtenerMensajeError(err, 'Error al cargar auditoría')
   } finally {
     cargando.value = false
   }

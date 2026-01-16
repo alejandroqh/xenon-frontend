@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { XMarkIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
 import * as sucursalesApi from '@/api/sucursales'
+import { obtenerMensajeError } from '@/api/errorUtils'
 import type { Sucursal, PaisSucursal, RegimenFiscalMX } from '@/types'
 
 const props = defineProps<{
@@ -252,9 +253,7 @@ async function guardar() {
 
     emit('guardado', resultado)
   } catch (err: unknown) {
-    const axiosError = err as { response?: { data?: { message?: string } } }
-    errorForm.value = axiosError.response?.data?.message
-      || (err instanceof Error ? err.message : 'Error al guardar sucursal')
+    errorForm.value = obtenerMensajeError(err, 'Error al guardar sucursal')
   } finally {
     guardando.value = false
   }

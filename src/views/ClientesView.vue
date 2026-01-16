@@ -6,6 +6,7 @@ import 'moment/dist/locale/es-mx.js'
 import Swal from 'sweetalert2'
 
 import * as clientesApi from '@/api/clientes'
+import { obtenerMensajeError } from '@/api/errorUtils'
 import type { Cliente } from '@/types'
 import { useSucursalStore } from '@/stores/sucursal'
 import ClienteFormModal from '@/components/ClienteFormModal.vue'
@@ -152,7 +153,7 @@ async function cargarClientes() {
       filtroActivo.value !== undefined ? { activo: filtroActivo.value } : undefined
     )
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Error al cargar clientes'
+    error.value = obtenerMensajeError(err, 'Error al cargar clientes')
   } finally {
     cargando.value = false
   }

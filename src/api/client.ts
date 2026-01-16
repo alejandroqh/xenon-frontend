@@ -1,7 +1,44 @@
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useSucursalStore } from '@/stores/sucursal'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
+
+// Traducir mensajes de error a español
+function obtenerMensajeError(error: AxiosError): string {
+  // Error de red (servidor caído, sin conexión, etc.)
+  if (error.message === 'Network Error') {
+    return 'Error de conexión. Verifique su conexión a internet o que el servidor esté disponible.'
+  }
+
+  // Timeout
+  if (error.code === 'ECONNABORTED') {
+    return 'La solicitud tardó demasiado tiempo. Intente nuevamente.'
+  }
+
+  // Errores HTTP según código de estado
+  if (error.response) {
+    const status = error.response.status
+    const mensajesHTTP: Record<number, string> = {
+      400: 'Solicitud inválida. Verifique los datos enviados.',
+      401: 'No autorizado. Inicie sesión nuevamente.',
+      403: 'Acceso denegado. No tiene permisos para esta acción.',
+      404: 'Recurso no encontrado.',
+      408: 'La solicitud tardó demasiado tiempo.',
+      409: 'Conflicto con el estado actual del recurso.',
+      422: 'Los datos enviados no son válidos.',
+      429: 'Demasiadas solicitudes. Espere un momento.',
+      500: 'Error interno del servidor. Intente más tarde.',
+      502: 'Error de conexión con el servidor.',
+      503: 'Servicio no disponible. El servidor está en mantenimiento.',
+      504: 'El servidor no respondió a tiempo.'
+    }
+
+    return mensajesHTTP[status] || `Error del servidor (${status}).`
+  }
+
+  // Error genérico
+  return 'Ocurrió un error inesperado. Intente nuevamente.'
+}
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -54,8 +91,20 @@ apiClient.interceptors.response.use(
       router.push({ name: 'Login' })
     }
 
+    // Agregar mensaje en español al error
+    if (error.isAxiosError) {
+      error.mensajeEspanol = obtenerMensajeError(error)
+    }
+
     return Promise.reject(error)
   }
 )
+
+// Extender tipo de AxiosError para incluir mensajeEspanol
+declare module 'axios' {
+  export interface AxiosError {
+    mensajeEspanol?: string
+  }
+}
 
 export default apiClient

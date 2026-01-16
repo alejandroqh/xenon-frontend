@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { XMarkIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
 import * as clientesApi from '@/api/clientes'
 import * as catalogosApi from '@/api/catalogos'
+import { obtenerMensajeError } from '@/api/errorUtils'
 import { useSucursalStore } from '@/stores/sucursal'
 import type { Cliente, TipoPersona, CrearClienteRequest, RegimenFiscal, TipoIdentificacion } from '@/types'
 
@@ -306,9 +307,7 @@ async function guardar() {
 
     emit('guardado', resultado)
   } catch (err: unknown) {
-    const axiosError = err as { response?: { data?: { message?: string } } }
-    errorForm.value = axiosError.response?.data?.message
-      || (err instanceof Error ? err.message : 'Error al guardar cliente')
+    errorForm.value = obtenerMensajeError(err, 'Error al guardar cliente')
   } finally {
     guardando.value = false
   }

@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { XMarkIcon, ChevronDownIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { useSucursalStore } from '@/stores/sucursal'
 import * as usuariosApi from '@/api/usuarios'
+import { obtenerMensajeError } from '@/api/errorUtils'
 import type {
   UsuarioResponse,
   NivelUsuario,
@@ -268,10 +269,7 @@ async function guardar() {
 
     emit('guardado', resultado)
   } catch (err: unknown) {
-    // Extract error message from API response or fallback to generic message
-    const axiosError = err as { response?: { data?: { message?: string } } }
-    errorForm.value = axiosError.response?.data?.message
-      || (err instanceof Error ? err.message : 'Error al guardar usuario')
+    errorForm.value = obtenerMensajeError(err, 'Error al guardar usuario')
   } finally {
     guardando.value = false
   }

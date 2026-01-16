@@ -6,6 +6,7 @@ import 'moment/dist/locale/es-mx.js'
 import Swal from 'sweetalert2'
 
 import * as usuariosApi from '@/api/usuarios'
+import { obtenerMensajeError } from '@/api/errorUtils'
 import type { UsuarioResponse, NivelUsuario } from '@/types'
 import { UserCircleIcon } from '@heroicons/vue/24/solid'
 import {
@@ -152,7 +153,7 @@ async function cargarUsuarios() {
       filtroActivo.value !== undefined ? { activo: filtroActivo.value } : undefined
     )
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Error al cargar usuarios'
+    error.value = obtenerMensajeError(err, 'Error al cargar usuarios')
   } finally {
     cargando.value = false
   }

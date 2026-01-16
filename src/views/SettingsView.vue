@@ -6,6 +6,7 @@ import 'moment/dist/locale/es-mx.js'
 import Swal from 'sweetalert2'
 
 import * as sucursalesApi from '@/api/sucursales'
+import { obtenerMensajeError } from '@/api/errorUtils'
 import { useSucursalStore } from '@/stores/sucursal'
 import type { Sucursal } from '@/types'
 import {
@@ -165,7 +166,7 @@ async function cargarSucursales() {
       filtroActivo.value !== undefined ? { activo: filtroActivo.value } : undefined
     )
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Error al cargar sucursales'
+    error.value = obtenerMensajeError(err, 'Error al cargar sucursales')
   } finally {
     cargando.value = false
   }
