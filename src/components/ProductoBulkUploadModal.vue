@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import Papa from 'papaparse'
-import Swal from 'sweetalert2'
 import {
   XMarkIcon,
   ArrowUpTrayIcon,
@@ -44,14 +43,8 @@ const paisDetectado = ref<'MX' | 'EC' | null>(null)
 const subiendo = ref(false)
 const resultadoCarga = ref<BulkUploadResponse | null>(null)
 
-// Toast configuration
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'center',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true
-})
+// Error message for inline display
+const errorMensaje = ref<string | null>(null)
 
 // Country from sucursal
 const paisSucursal = computed(() => sucursalStore.sucursalActual?.pais ?? 'MX')
@@ -132,10 +125,7 @@ function parsearArchivo(file: File) {
     skipEmptyLines: true,
     complete: (results) => {
       if (results.errors.length > 0) {
-        Toast.fire({
-          icon: 'error',
-          title: 'Error al leer el archivo CSV'
-        })
+        errorMensaje.value = 'Error al leer el archivo CSV'
         return
       }
 
@@ -166,10 +156,7 @@ function parsearArchivo(file: File) {
       paso.value = 'preview'
     },
     error: () => {
-      Toast.fire({
-        icon: 'error',
-        title: 'Error al procesar el archivo'
-      })
+      errorMensaje.value = 'Error al procesar el archivo'
     }
   })
 }
@@ -180,12 +167,10 @@ function manejarArchivo(event: Event) {
   const file = target.files?.[0]
   if (file) {
     if (!file.name.endsWith('.csv')) {
-      Toast.fire({
-        icon: 'error',
-        title: 'Solo se permiten archivos CSV'
-      })
+      errorMensaje.value = 'Solo se permiten archivos CSV'
       return
     }
+    errorMensaje.value = null
     archivo.value = file
     parsearArchivo(file)
   }
@@ -199,12 +184,10 @@ function manejarDrop(event: DragEvent) {
   const file = event.dataTransfer?.files[0]
   if (file) {
     if (!file.name.endsWith('.csv')) {
-      Toast.fire({
-        icon: 'error',
-        title: 'Solo se permiten archivos CSV'
-      })
+      errorMensaje.value = 'Solo se permiten archivos CSV'
       return
     }
+    errorMensaje.value = null
     archivo.value = file
     parsearArchivo(file)
   }
@@ -264,10 +247,7 @@ async function descargarGuia() {
     link.click()
     URL.revokeObjectURL(link.href)
   } catch (err) {
-    Toast.fire({
-      icon: 'error',
-      title: 'Error al descargar la guia'
-    })
+    errorMensaje.value = 'Error al descargar la guia'
   }
 }
 
@@ -313,10 +293,7 @@ async function subirArchivo() {
     paso.value = 'result'
     emit('cargaCompletada', resultado)
   } catch (err) {
-    Toast.fire({
-      icon: 'error',
-      title: obtenerMensajeError(err, 'Error al cargar productos')
-    })
+    errorMensaje.value = obtenerMensajeError(err, 'Error al cargar productos')
   } finally {
     subiendo.value = false
   }
@@ -329,6 +306,7 @@ function reiniciar() {
   erroresValidacion.value = []
   paisDetectado.value = null
   resultadoCarga.value = null
+  errorMensaje.value = null
   paso.value = 'upload'
 }
 
@@ -438,6 +416,14 @@ watch(() => props.abierto, (newVal) => {
                   <p class="text-sm text-gray-500">
                     o haz clic para seleccionar un archivo
                   </p>
+                </div>
+
+                <!-- Error message -->
+                <div v-if="errorMensaje" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div class="flex items-center gap-3">
+                    <ExclamationCircleIcon class="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <p class="text-sm font-medium text-red-800">{{ errorMensaje }}</p>
+                  </div>
                 </div>
 
                 <!-- Instructions -->
